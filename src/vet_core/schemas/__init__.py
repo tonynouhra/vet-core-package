@@ -6,16 +6,29 @@ and data serialization across the veterinary clinic platform.
 """
 
 # Core schemas will be imported as they're implemented
-# from .user import UserCreate, UserUpdate, UserResponse
+from .user import (
+    UserCreate, UserUpdate, UserResponse, UserAdminResponse, UserListResponse,
+    UserRoleUpdate, UserStatusUpdate, UserPreferencesUpdate,
+    PetOwnerCreate, VeterinarianCreate, VetTechCreate, ClinicAdminCreate
+)
 # from .pet import PetCreate, PetUpdate, PetResponse
 # from .appointment import AppointmentCreate, AppointmentUpdate, AppointmentResponse
 # from .clinic import ClinicCreate, ClinicUpdate, ClinicResponse
 
 __all__ = [
     # User schemas
-    # "UserCreate",
-    # "UserUpdate", 
-    # "UserResponse",
+    "UserCreate",
+    "UserUpdate", 
+    "UserResponse",
+    "UserAdminResponse",
+    "UserListResponse",
+    "UserRoleUpdate",
+    "UserStatusUpdate",
+    "UserPreferencesUpdate",
+    "PetOwnerCreate",
+    "VeterinarianCreate",
+    "VetTechCreate",
+    "ClinicAdminCreate",
     # Pet schemas
     # "PetCreate",
     # "PetUpdate",

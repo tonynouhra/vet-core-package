@@ -49,7 +49,7 @@
   - Create spatial indexes for location-based queries
   - _Requirements: 1.1, 6.3, 6.4_
 
-- [ ] 4. Create Pydantic validation schemas
+- [-] 4. Create Pydantic validation schemas
 - [ ] 4.1 Implement User schemas for API validation
 
   - Create UserCreate, UserUpdate, and UserResponse Pydantic schemas
