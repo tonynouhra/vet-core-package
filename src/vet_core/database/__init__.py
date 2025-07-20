@@ -5,16 +5,36 @@ This module provides async SQLAlchemy engine configuration, session management,
 and database utilities for the veterinary clinic platform.
 """
 
-# Database utilities will be imported as they're implemented
-# from .connection import create_engine, get_database_url
-# from .session import AsyncSessionLocal, get_session, SessionManager
+from .connection import (
+    DatabaseConfig,
+    create_engine,
+    get_database_url,
+    test_connection,
+    close_engine,
+    wait_for_database,
+)
+from .session import (
+    SessionManager,
+    initialize_session_manager,
+    get_session_manager,
+    get_session,
+    get_transaction,
+    AsyncSessionLocal,
+)
 
 __all__ = [
     # Connection utilities
-    # "create_engine",
-    # "get_database_url",
+    "DatabaseConfig",
+    "create_engine",
+    "get_database_url",
+    "test_connection",
+    "close_engine",
+    "wait_for_database",
     # Session management
-    # "AsyncSessionLocal",
-    # "get_session",
-    # "SessionManager",
+    "SessionManager",
+    "initialize_session_manager",
+    "get_session_manager",
+    "get_session",
+    "get_transaction",
+    "AsyncSessionLocal",
 ]

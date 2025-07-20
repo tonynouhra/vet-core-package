@@ -6,7 +6,7 @@ veterinary clinic platform.
 """
 
 # Base model will be imported by all other models
-from .base import BaseModel
+from .base import Base, BaseModel
 
 # Core entity models
 # These imports will be uncommented as models are implemented
@@ -17,6 +17,7 @@ from .base import BaseModel
 # from .veterinarian import Veterinarian
 
 __all__ = [
+    "Base",
     "BaseModel",
     # "User",
     # "Pet", 
