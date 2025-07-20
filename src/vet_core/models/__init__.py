@@ -10,7 +10,7 @@ from .base import Base, BaseModel
 
 # Core entity models
 # These imports will be uncommented as models are implemented
-# from .user import User
+from .user import User, UserRole, UserStatus
 # from .pet import Pet
 # from .appointment import Appointment
 # from .clinic import Clinic
@@ -19,7 +19,9 @@ from .base import Base, BaseModel
 __all__ = [
     "Base",
     "BaseModel",
-    # "User",
+    "User",
+    "UserRole",
+    "UserStatus",
     # "Pet", 
     # "Appointment",
     # "Clinic",
