@@ -10,7 +10,7 @@ from typing import Any, Dict, Optional
 
 from sqlalchemy import Boolean, Enum, Index, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseModel
 
@@ -248,6 +248,10 @@ class User(BaseModel):
         # GIN index for JSONB preferences
         Index('idx_users_preferences_gin', 'preferences', postgresql_using='gin'),
     )
+    
+    # Relationships
+    pets = relationship("Pet", back_populates="owner")
+    veterinarian = relationship("Veterinarian", back_populates="user", uselist=False)
     
     def __repr__(self) -> str:
         """String representation of the User model."""

@@ -9,12 +9,11 @@ veterinary clinic platform.
 from .base import Base, BaseModel
 
 # Core entity models
-# These imports will be uncommented as models are implemented
 from .user import User, UserRole, UserStatus
 from .pet import Pet, PetSpecies, PetGender, PetSize, PetStatus
 from .appointment import Appointment, AppointmentStatus, ServiceType, AppointmentPriority
-# from .clinic import Clinic
-# from .veterinarian import Veterinarian
+from .clinic import Clinic, ClinicStatus, ClinicType
+from .veterinarian import Veterinarian, VeterinarianStatus, LicenseStatus, EmploymentType
 
 __all__ = [
     "Base",
@@ -31,6 +30,11 @@ __all__ = [
     "AppointmentStatus",
     "ServiceType",
     "AppointmentPriority",
-    # "Clinic",
-    # "Veterinarian",
+    "Clinic",
+    "ClinicStatus",
+    "ClinicType",
+    "Veterinarian",
+    "VeterinarianStatus",
+    "LicenseStatus",
+    "EmploymentType",
 ]

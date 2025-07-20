@@ -306,11 +306,13 @@ class Pet(BaseModel):
     
     # Veterinary preferences
     preferred_veterinarian_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("veterinarians.id", ondelete="SET NULL"),
         nullable=True,
         comment="UUID of preferred veterinarian"
     )
     
     preferred_clinic_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("clinics.id", ondelete="SET NULL"),
         nullable=True,
         comment="UUID of preferred clinic"
     )
@@ -384,8 +386,9 @@ class Pet(BaseModel):
         Index('idx_pets_species_other_description', 'species_other_description'),
     )
     
-    # Relationship to User model (will be defined when User model is available)
-    # owner = relationship("User", back_populates="pets")
+    # Relationships
+    owner = relationship("User", back_populates="pets")
+    appointments = relationship("Appointment", back_populates="pet")
     
     def __repr__(self) -> str:
         """String representation of the Pet model."""

@@ -14,7 +14,7 @@ from typing import Optional
 from sqlalchemy import (
     CheckConstraint, DateTime, Enum, ForeignKey, Index, Numeric, String, Text
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseModel
 
@@ -95,14 +95,14 @@ class Appointment(BaseModel):
     )
     
     veterinarian_id: Mapped[uuid.UUID] = mapped_column(
-        # Will reference veterinarians.id when that model is created
+        ForeignKey("veterinarians.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
         comment="UUID of the assigned veterinarian"
     )
     
     clinic_id: Mapped[uuid.UUID] = mapped_column(
-        # Will reference clinics.id when that model is created
+        ForeignKey("clinics.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
         comment="UUID of the clinic where appointment takes place"
@@ -347,10 +347,10 @@ class Appointment(BaseModel):
         Index('idx_appointments_service_other_description', 'service_type_other_description'),
     )
     
-    # Relationships will be defined when other models are available
-    # pet = relationship("Pet", back_populates="appointments")
-    # veterinarian = relationship("Veterinarian", back_populates="appointments")
-    # clinic = relationship("Clinic", back_populates="appointments")
+    # Relationships
+    pet = relationship("Pet", back_populates="appointments")
+    veterinarian = relationship("Veterinarian", back_populates="appointments")
+    clinic = relationship("Clinic", back_populates="appointments")
     
     def __repr__(self) -> str:
         """String representation of the Appointment model."""

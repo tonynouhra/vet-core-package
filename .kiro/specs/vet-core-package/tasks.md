@@ -41,7 +41,7 @@
   - Create composite indexes for efficient appointment queries
   - _Requirements: 1.1, 6.2_
 
-- [ ] 3.4 Implement Clinic and Veterinarian models
+- [x] 3.4 Implement Clinic and Veterinarian models
 
   - Create Clinic model with location data and operating hours
   - Implement Veterinarian model with credentials and specializations
