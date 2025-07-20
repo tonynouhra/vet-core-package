@@ -33,7 +33,7 @@
   - Create indexes for efficient pet queries and owner lookups
   - _Requirements: 1.1, 6.1, 6.5_
 
-- [ ] 3.3 Implement Appointment model with scheduling capabilities
+- [x] 3.3 Implement Appointment model with scheduling capabilities
 
   - Create Appointment SQLAlchemy model with datetime handling
   - Add relationships to Pet, Veterinarian, and Clinic models

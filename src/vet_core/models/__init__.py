@@ -12,7 +12,7 @@ from .base import Base, BaseModel
 # These imports will be uncommented as models are implemented
 from .user import User, UserRole, UserStatus
 from .pet import Pet, PetSpecies, PetGender, PetSize, PetStatus
-# from .appointment import Appointment
+from .appointment import Appointment, AppointmentStatus, ServiceType, AppointmentPriority
 # from .clinic import Clinic
 # from .veterinarian import Veterinarian
 
@@ -27,7 +27,10 @@ __all__ = [
     "PetGender", 
     "PetSize",
     "PetStatus",
-    # "Appointment",
+    "Appointment",
+    "AppointmentStatus",
+    "ServiceType",
+    "AppointmentPriority",
     # "Clinic",
     # "Veterinarian",
 ]
