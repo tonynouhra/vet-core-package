@@ -33,7 +33,12 @@ class AppointmentStatus(enum.Enum):
 
 
 class ServiceType(enum.Enum):
-    """Enumeration of veterinary service types."""
+    """
+    Enumeration of veterinary service types.
+    
+    When using OTHER, provide a description in service_type_other_description field
+    (e.g., 'acupuncture', 'behavioral training', 'nail trimming', 'microchipping').
+    """
     
     WELLNESS_EXAM = "wellness_exam"
     VACCINATION = "vaccination"
@@ -123,6 +128,12 @@ class Appointment(BaseModel):
         nullable=False,
         index=True,
         comment="Type of veterinary service"
+    )
+    
+    service_type_other_description: Mapped[Optional[str]] = mapped_column(
+        String(200),
+        nullable=True,
+        comment="Description when service_type is 'other' (e.g., 'acupuncture', 'behavioral training', 'nail trimming')"
     )
     
     status: Mapped[AppointmentStatus] = mapped_column(
@@ -229,6 +240,10 @@ class Appointment(BaseModel):
             name='ck_appointments_duration_positive'
         ),
         CheckConstraint(
+            "service_type != 'other' OR service_type_other_description IS NOT NULL",
+            name='ck_appointments_service_other_description_required'
+        ),
+        CheckConstraint(
             'estimated_cost IS NULL OR estimated_cost >= 0',
             name='ck_appointments_estimated_cost_non_negative'
         ),
@@ -327,6 +342,9 @@ class Appointment(BaseModel):
             'completed_at',
             postgresql_where=(follow_up_needed == True)
         ),
+        
+        # Index for service type other description
+        Index('idx_appointments_service_other_description', 'service_type_other_description'),
     )
     
     # Relationships will be defined when other models are available
@@ -615,6 +633,9 @@ class Appointment(BaseModel):
     
     def get_service_display(self) -> str:
         """Get a human-readable service type display."""
+        if self.service_type == ServiceType.OTHER and self.service_type_other_description:
+            return self.service_type_other_description.title()
+        
         service_display = {
             ServiceType.WELLNESS_EXAM: "Wellness Exam",
             ServiceType.VACCINATION: "Vaccination",
@@ -630,6 +651,29 @@ class Appointment(BaseModel):
             ServiceType.OTHER: "Other"
         }
         return service_display.get(self.service_type, self.service_type.value.title())
+    
+    def set_other_service_type(self, description: str) -> None:
+        """
+        Set the service type to 'other' with a custom description.
+        
+        Args:
+            description: Description of the service (e.g., 'acupuncture', 'behavioral training')
+        """
+        if not description or not description.strip():
+            raise ValueError("Description is required when setting service type to 'other'")
+        self.service_type = ServiceType.OTHER
+        self.service_type_other_description = description.strip().lower()
+    
+    def validate_service_type_description(self) -> bool:
+        """
+        Validate that if service_type is 'other', a description is provided.
+        
+        Returns:
+            True if valid, False otherwise
+        """
+        if self.service_type == ServiceType.OTHER:
+            return bool(self.service_type_other_description and self.service_type_other_description.strip())
+        return True
     
     def get_priority_display(self) -> str:
         """Get a human-readable priority display."""

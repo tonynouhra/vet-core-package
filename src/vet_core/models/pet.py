@@ -21,7 +21,12 @@ from .base import BaseModel
 
 
 class PetSpecies(enum.Enum):
-    """Enumeration of pet species supported by the platform."""
+    """
+    Enumeration of pet species supported by the platform.
+    
+    When using OTHER, provide a description in species_other_description field
+    (e.g., 'snake', 'turtle', 'parrot', 'iguana').
+    """
     
     DOG = "dog"
     CAT = "cat"
@@ -109,6 +114,12 @@ class Pet(BaseModel):
         nullable=False,
         index=True,
         comment="Pet's species"
+    )
+    
+    species_other_description: Mapped[Optional[str]] = mapped_column(
+        String(100),
+        nullable=True,
+        comment="Description when species is 'other' (e.g., 'snake', 'turtle', 'parrot')"
     )
     
     breed: Mapped[Optional[str]] = mapped_column(
@@ -312,6 +323,10 @@ class Pet(BaseModel):
             name='ck_pets_weight_positive'
         ),
         CheckConstraint(
+            "species != 'other' OR species_other_description IS NOT NULL",
+            name='ck_pets_species_other_description_required'
+        ),
+        CheckConstraint(
             'approximate_age_years IS NULL OR approximate_age_years >= 0',
             name='ck_pets_age_years_non_negative'
         ),
@@ -364,6 +379,9 @@ class Pet(BaseModel):
         
         # Full-text search indexes for names and notes
         Index('idx_pets_name_search', 'name', postgresql_using='gin', postgresql_ops={'name': 'gin_trgm_ops'}),
+        
+        # Index for species other description
+        Index('idx_pets_species_other_description', 'species_other_description'),
     )
     
     # Relationship to User model (will be defined when User model is available)
@@ -460,6 +478,37 @@ class Pet(BaseModel):
         elif self.mixed_breed:
             return "Mixed Breed"
         return "Unknown"
+    
+    @property
+    def species_display(self) -> str:
+        """Get a display-friendly species name."""
+        if self.species == PetSpecies.OTHER and self.species_other_description:
+            return self.species_other_description.title()
+        else:
+            return self.species.value.replace('_', ' ').title()
+    
+    def set_other_species(self, description: str) -> None:
+        """
+        Set the species to 'other' with a custom description.
+        
+        Args:
+            description: Description of the species (e.g., 'snake', 'turtle')
+        """
+        if not description or not description.strip():
+            raise ValueError("Description is required when setting species to 'other'")
+        self.species = PetSpecies.OTHER
+        self.species_other_description = description.strip().lower()
+    
+    def validate_species_description(self) -> bool:
+        """
+        Validate that if species is 'other', a description is provided.
+        
+        Returns:
+            True if valid, False otherwise
+        """
+        if self.species == PetSpecies.OTHER:
+            return bool(self.species_other_description and self.species_other_description.strip())
+        return True
     
     def is_due_for_vaccination(self, vaccine_type: str) -> bool:
         """
