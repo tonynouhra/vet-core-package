@@ -25,7 +25,7 @@
   - Create proper indexes and constraints for user data
   - _Requirements: 1.1, 1.3, 6.4_
 
-- [ ] 3.2 Implement Pet model with comprehensive pet data
+- [x] 3.2 Implement Pet model with comprehensive pet data
 
   - Create Pet SQLAlchemy model with species, breed, and medical information
   - Add owner relationship with proper foreign key constraints

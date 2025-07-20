@@ -11,7 +11,7 @@ from .base import Base, BaseModel
 # Core entity models
 # These imports will be uncommented as models are implemented
 from .user import User, UserRole, UserStatus
-# from .pet import Pet
+from .pet import Pet, PetSpecies, PetGender, PetSize, PetStatus
 # from .appointment import Appointment
 # from .clinic import Clinic
 # from .veterinarian import Veterinarian
@@ -22,7 +22,11 @@ __all__ = [
     "User",
     "UserRole",
     "UserStatus",
-    # "Pet", 
+    "Pet",
+    "PetSpecies",
+    "PetGender", 
+    "PetSize",
+    "PetStatus",
     # "Appointment",
     # "Clinic",
     # "Veterinarian",
