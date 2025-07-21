@@ -11,9 +11,24 @@ from .user import (
     UserRoleUpdate, UserStatusUpdate, UserPreferencesUpdate,
     PetOwnerCreate, VeterinarianCreate, VetTechCreate, ClinicAdminCreate
 )
-# from .pet import PetCreate, PetUpdate, PetResponse
-# from .appointment import AppointmentCreate, AppointmentUpdate, AppointmentResponse
-# from .clinic import ClinicCreate, ClinicUpdate, ClinicResponse
+from .pet import (
+    PetCreate, PetUpdate, PetResponse, PetListResponse,
+    PetMedicalHistoryUpdate, PetVaccinationUpdate, PetWeightUpdate
+)
+from .appointment import (
+    AppointmentCreate, AppointmentUpdate, AppointmentResponse, AppointmentListResponse,
+    AppointmentStatusUpdate, AppointmentReschedule, AppointmentCompletion,
+    AppointmentSlotAvailability
+)
+from .clinic import (
+    ClinicCreate, ClinicUpdate, ClinicResponse, ClinicListResponse,
+    ClinicStatusUpdate, ClinicSearchFilters
+)
+from .veterinarian import (
+    VeterinarianCreate, VeterinarianUpdate, VeterinarianResponse, VeterinarianListResponse,
+    VeterinarianStatusUpdate, VeterinarianLicenseUpdate, VeterinarianAvailabilityUpdate,
+    VeterinarianSearchFilters, VeterinarianRatingUpdate
+)
 
 __all__ = [
     # User schemas
@@ -30,15 +45,37 @@ __all__ = [
     "VetTechCreate",
     "ClinicAdminCreate",
     # Pet schemas
-    # "PetCreate",
-    # "PetUpdate",
-    # "PetResponse",
+    "PetCreate",
+    "PetUpdate",
+    "PetResponse",
+    "PetListResponse",
+    "PetMedicalHistoryUpdate",
+    "PetVaccinationUpdate",
+    "PetWeightUpdate",
     # Appointment schemas
-    # "AppointmentCreate",
-    # "AppointmentUpdate",
-    # "AppointmentResponse",
+    "AppointmentCreate",
+    "AppointmentUpdate",
+    "AppointmentResponse",
+    "AppointmentListResponse",
+    "AppointmentStatusUpdate",
+    "AppointmentReschedule",
+    "AppointmentCompletion",
+    "AppointmentSlotAvailability",
     # Clinic schemas
-    # "ClinicCreate",
-    # "ClinicUpdate",
-    # "ClinicResponse",
+    "ClinicCreate",
+    "ClinicUpdate",
+    "ClinicResponse",
+    "ClinicListResponse",
+    "ClinicStatusUpdate",
+    "ClinicSearchFilters",
+    # Veterinarian schemas
+    "VeterinarianCreate",
+    "VeterinarianUpdate",
+    "VeterinarianResponse",
+    "VeterinarianListResponse",
+    "VeterinarianStatusUpdate",
+    "VeterinarianLicenseUpdate",
+    "VeterinarianAvailabilityUpdate",
+    "VeterinarianSearchFilters",
+    "VeterinarianRatingUpdate",
 ]

@@ -8,10 +8,10 @@ including create, update, and response schemas with role-based restrictions.
 import re
 from datetime import datetime
 from typing import Any, Dict, Optional
-from pydantic import (
-    BaseModel, ConfigDict, EmailStr, Field,
-    field_validator, model_validator, computed_field
-)
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
+
 from ..models.user import UserRole, UserStatus
 
 
@@ -19,10 +19,10 @@ class UserBase(BaseModel):
     """Base User schema with common fields."""
     
     model_config = ConfigDict(
-        from_attributes=True,
-        use_enum_values=True,
-        validate_assignment=True,
-        str_strip_whitespace=True,
+        from_attributes=True, # Can create from SQLAlchemy models
+        use_enum_values=True, # Serialize enums as values
+        validate_assignment=True, # Validate on assignment
+        str_strip_whitespace=True, # Validate on field assignment
     )
     
     email: EmailStr = Field(
@@ -38,7 +38,7 @@ class UserBase(BaseModel):
     )
     last_name: str = Field(
         ...,
-        description="User's last name", 
+        description="User's last name",
         min_length=1,
         max_length=100
     )
@@ -134,12 +134,11 @@ class UserBase(BaseModel):
         if len(digits_only) == 10:
             # US format: (123) 456-7890
             return f"({digits_only[:3]}) {digits_only[3:6]}-{digits_only[6:]}"
-        elif len(digits_only) == 11 and digits_only.startswith('1'):
+        if len(digits_only) == 11 and digits_only.startswith('1'):
             # US format with country code: +1 (123) 456-7890
             return f"+1 ({digits_only[1:4]}) {digits_only[4:7]}-{digits_only[7:]}"
-        else:
-            # International format: +XX XXXXXXXXX
-            return f"+{digits_only}"
+        # International format: +XX XXXXXXXXX
+        return f"+{digits_only}"
     
     @field_validator('first_name', 'last_name')
     @classmethod
@@ -342,7 +341,13 @@ class UserUpdate(BaseModel):
     @model_validator(mode='after')
     def validate_at_least_one_field(self):
         """Ensure at least one field is provided for update."""
-        if not any(getattr(self, field) is not None for field in self.model_fields):
+        field_values = [
+            self.first_name, self.last_name, self.phone_number, self.avatar_url,
+            self.bio, self.address_line1, self.address_line2, self.city, self.state,
+            self.postal_code, self.country, self.email_notifications,
+            self.sms_notifications, self.preferences
+        ]
+        if not any(value is not None for value in field_values):
             raise ValueError("At least one field must be provided for update")
         return self
 
@@ -355,7 +360,7 @@ class UserResponse(BaseModel):
         use_enum_values=True,
     )
     
-    id: str = Field(..., description="User's unique identifier")
+    id: UUID = Field(..., description="User's unique identifier")
     email: str = Field(..., description="User's email address")
     first_name: str = Field(..., description="User's first name")
     last_name: str = Field(..., description="User's last name")
@@ -377,13 +382,6 @@ class UserResponse(BaseModel):
     preferences: Optional[Dict[str, Any]] = Field(None, description="User preferences")
     created_at: datetime = Field(..., description="Account creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
-    
-    # Computed properties
-    full_name: Optional[str] = Field(None, description="User's full name")
-    display_name: Optional[str] = Field(None, description="Display-friendly name")
-    is_active: Optional[bool] = Field(None, description="Whether account is active")
-    is_verified: Optional[bool] = Field(None, description="Whether email is verified")
-    has_complete_profile: Optional[bool] = Field(None, description="Whether profile is complete")
 
 
 class UserAdminResponse(UserResponse):
@@ -399,7 +397,7 @@ class UserListResponse(BaseModel):
     
     model_config = ConfigDict(from_attributes=True)
     
-    id: str = Field(..., description="User's unique identifier")
+    id: UUID = Field(..., description="User's unique identifier")
     email: str = Field(..., description="User's email address")
     first_name: str = Field(..., description="User's first name")
     last_name: str = Field(..., description="User's last name")
@@ -407,10 +405,6 @@ class UserListResponse(BaseModel):
     status: UserStatus = Field(..., description="User's status")
     avatar_url: Optional[str] = Field(None, description="Avatar URL")
     created_at: datetime = Field(..., description="Creation timestamp")
-    
-    # Computed fields for list view
-    full_name: Optional[str] = Field(None, description="Full name")
-    is_active: Optional[bool] = Field(None, description="Active status")
 
 
 class UserRoleUpdate(BaseModel):
@@ -511,5 +505,15 @@ class ClinicAdminCreate(UserCreate):
     role: UserRole = Field(
         UserRole.CLINIC_ADMIN,
         description="Role fixed as clinic admin",
+        frozen=True
+    )
+
+
+class PlatformAdminCreate(UserCreate):
+    """Schema for creating platform admin accounts."""
+    
+    role: UserRole = Field(
+        UserRole.PLATFORM_ADMIN,
+        description="Role fixed as platform admin",
         frozen=True
     )
