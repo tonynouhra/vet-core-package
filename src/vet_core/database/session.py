@@ -7,12 +7,14 @@ transaction utilities for database operations.
 
 import asyncio
 import logging
+import time
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator, Optional
+from typing import AsyncGenerator, Optional, Dict, Any, Callable, Awaitable
 
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
-from sqlalchemy.exc import SQLAlchemyError, DisconnectionError
-from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError, DisconnectionError, OperationalError
+from sqlalchemy import text, MetaData
+from sqlalchemy.pool import Pool
 
 from ..exceptions import DatabaseException, TransactionException
 
@@ -24,20 +26,34 @@ class SessionManager:
     Manages database sessions and provides transaction utilities.
     """
 
-    def __init__(self, engine: AsyncEngine):
+    def __init__(self, engine: AsyncEngine, session_config: Optional[Dict[str, Any]] = None):
         """
         Initialize session manager with database engine.
 
         Args:
             engine: SQLAlchemy async engine
+            session_config: Optional session configuration overrides
         """
         self.engine = engine
+        self._is_initialized = False
+        self._health_check_interval = 30.0  # seconds
+        self._last_health_check = 0.0
+        
+        # Default session configuration
+        default_config = {
+            "expire_on_commit": False,
+            "autoflush": True,
+            "autocommit": False,
+        }
+        
+        # Merge with provided config
+        if session_config:
+            default_config.update(session_config)
+        
         self.session_factory = async_sessionmaker(
             bind=engine,
             class_=AsyncSession,
-            expire_on_commit=False,
-            autoflush=True,
-            autocommit=False,
+            **default_config
         )
 
     async def create_session(self) -> AsyncSession:
@@ -136,20 +152,266 @@ class SessionManager:
                     original_error=e,
                 )
 
-    async def health_check(self) -> bool:
+    async def health_check(self, force: bool = False) -> Dict[str, Any]:
         """
-        Check if database sessions can be created and used.
+        Comprehensive health check for database sessions and connections.
+
+        Args:
+            force: Force health check even if recently performed
 
         Returns:
-            True if healthy, False otherwise
+            Dictionary with health check results
         """
+        current_time = time.time()
+        
+        # Skip if recently checked (unless forced)
+        if not force and (current_time - self._last_health_check) < self._health_check_interval:
+            return {"status": "skipped", "reason": "recently_checked"}
+        
+        health_status = {
+            "status": "healthy",
+            "timestamp": current_time,
+            "checks": {},
+            "pool_info": {},
+        }
+        
         try:
+            # Test basic session creation and query
+            start_time = time.time()
             async with self.get_session() as session:
                 await session.execute(text("SELECT 1"))
-            return True
+            query_time = time.time() - start_time
+            
+            health_status["checks"]["basic_query"] = {
+                "status": "pass",
+                "response_time": round(query_time * 1000, 2)  # ms
+            }
+            
+            # Test transaction capability
+            start_time = time.time()
+            async with self.get_transaction() as session:
+                await session.execute(text("SELECT 1"))
+            transaction_time = time.time() - start_time
+            
+            health_status["checks"]["transaction"] = {
+                "status": "pass",
+                "response_time": round(transaction_time * 1000, 2)  # ms
+            }
+            
+            # Get pool information
+            pool = self.engine.pool
+            if hasattr(pool, 'size'):
+                health_status["pool_info"] = {
+                    "size": pool.size(),
+                    "checked_in": pool.checkedin(),
+                    "checked_out": pool.checkedout(),
+                    "overflow": getattr(pool, 'overflow', lambda: 0)(),
+                    "invalid": getattr(pool, 'invalid', lambda: 0)(),
+                }
+            
+            self._last_health_check = current_time
+            
+        except OperationalError as e:
+            health_status["status"] = "unhealthy"
+            health_status["checks"]["connection"] = {
+                "status": "fail",
+                "error": str(e),
+                "error_type": "OperationalError"
+            }
+            logger.error(f"Database operational error during health check: {e}")
+            
+        except SQLAlchemyError as e:
+            health_status["status"] = "unhealthy"
+            health_status["checks"]["database"] = {
+                "status": "fail",
+                "error": str(e),
+                "error_type": "SQLAlchemyError"
+            }
+            logger.error(f"Database error during health check: {e}")
+            
         except Exception as e:
-            logger.error(f"Session health check failed: {e}")
+            health_status["status"] = "unhealthy"
+            health_status["checks"]["general"] = {
+                "status": "fail",
+                "error": str(e),
+                "error_type": type(e).__name__
+            }
+            logger.error(f"Unexpected error during health check: {e}")
+        
+        return health_status
+
+    async def initialize_database(self, metadata: Optional[MetaData] = None) -> bool:
+        """
+        Initialize database schema and perform setup operations.
+
+        Args:
+            metadata: SQLAlchemy metadata object containing table definitions
+
+        Returns:
+            True if initialization successful, False otherwise
+        """
+        try:
+            logger.info("Starting database initialization...")
+            
+            # Test connection first
+            health = await self.health_check(force=True)
+            if health["status"] != "healthy":
+                logger.error("Database health check failed during initialization")
+                return False
+            
+            # Create tables if metadata provided
+            if metadata:
+                async with self.engine.begin() as conn:
+                    await conn.run_sync(metadata.create_all)
+                logger.info("Database tables created successfully")
+            
+            # Perform any additional initialization
+            async with self.get_session() as session:
+                # Test that we can perform basic operations
+                await session.execute(text("SELECT version()"))
+                logger.info("Database initialization completed successfully")
+            
+            self._is_initialized = True
+            return True
+            
+        except Exception as e:
+            logger.error(f"Database initialization failed: {e}")
             return False
+
+    async def cleanup_database(self, metadata: Optional[MetaData] = None, drop_all: bool = False) -> bool:
+        """
+        Clean up database resources and optionally drop schema.
+
+        Args:
+            metadata: SQLAlchemy metadata object containing table definitions
+            drop_all: Whether to drop all tables (use with caution)
+
+        Returns:
+            True if cleanup successful, False otherwise
+        """
+        try:
+            logger.info("Starting database cleanup...")
+            
+            if drop_all and metadata:
+                async with self.engine.begin() as conn:
+                    await conn.run_sync(metadata.drop_all)
+                logger.warning("All database tables dropped")
+            
+            # Close all sessions and connections
+            await self.close_all_sessions()
+            
+            logger.info("Database cleanup completed successfully")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Database cleanup failed: {e}")
+            return False
+
+    async def close_all_sessions(self) -> None:
+        """
+        Close all active sessions and dispose of the engine.
+        """
+        try:
+            # Dispose of the engine (closes all connections)
+            await self.engine.dispose()
+            logger.info("All database sessions and connections closed")
+        except Exception as e:
+            logger.error(f"Error closing database sessions: {e}")
+
+    async def execute_with_retry(
+        self,
+        operation: Callable[[AsyncSession], Awaitable[Any]],
+        max_retries: int = 3,
+        retry_delay: float = 1.0,
+        exponential_backoff: bool = True,
+    ) -> Any:
+        """
+        Execute a database operation with retry logic for transient failures.
+
+        Args:
+            operation: Async function that takes a session and returns a result
+            max_retries: Maximum number of retry attempts
+            retry_delay: Initial delay between retries in seconds
+            exponential_backoff: Whether to use exponential backoff
+
+        Returns:
+            Result of the operation
+
+        Raises:
+            DatabaseException: If operation fails after all retries
+        """
+        last_exception = None
+        
+        for attempt in range(max_retries + 1):
+            try:
+                async with self.get_transaction() as session:
+                    return await operation(session)
+                    
+            except (DisconnectionError, OperationalError) as e:
+                last_exception = e
+                if attempt < max_retries:
+                    delay = retry_delay * (2 ** attempt if exponential_backoff else 1)
+                    logger.warning(
+                        f"Database operation failed (attempt {attempt + 1}/{max_retries + 1}), "
+                        f"retrying in {delay}s: {e}"
+                    )
+                    await asyncio.sleep(delay)
+                else:
+                    logger.error(f"Database operation failed after {max_retries + 1} attempts: {e}")
+                    
+            except Exception as e:
+                # Don't retry for non-transient errors
+                logger.error(f"Non-retryable database operation error: {e}")
+                raise DatabaseException(
+                    "Database operation failed",
+                    details={"operation": operation.__name__ if hasattr(operation, "__name__") else str(operation)},
+                    original_error=e
+                )
+        
+        # If we get here, all retries failed
+        raise DatabaseException(
+            f"Database operation failed after {max_retries + 1} attempts",
+            details={
+                "operation": operation.__name__ if hasattr(operation, "__name__") else str(operation),
+                "max_retries": max_retries
+            },
+            original_error=last_exception
+        )
+
+    @property
+    def is_initialized(self) -> bool:
+        """Check if the database has been initialized."""
+        return self._is_initialized
+
+    async def get_pool_status(self) -> Dict[str, Any]:
+        """
+        Get detailed connection pool status information.
+
+        Returns:
+            Dictionary with pool status information
+        """
+        pool = self.engine.pool
+        
+        # Safely mask password in URL
+        url_str = str(self.engine.url)
+        if hasattr(self.engine.url, 'password') and self.engine.url.password:
+            url_str = url_str.replace(str(self.engine.url.password), "***")
+        
+        status = {
+            "pool_class": pool.__class__.__name__,
+            "url": url_str,
+        }
+        
+        if hasattr(pool, 'size'):
+            status.update({
+                "size": pool.size(),
+                "checked_in": pool.checkedin(),
+                "checked_out": pool.checkedout(),
+                "overflow": getattr(pool, 'overflow', lambda: 0)(),
+                "invalid": getattr(pool, 'invalid', lambda: 0)(),
+            })
+        
+        return status
 
 
 # Global session manager instance (will be initialized by application)
@@ -219,6 +481,100 @@ async def get_transaction() -> AsyncGenerator[AsyncSession, None]:
     manager = get_session_manager()
     async with manager.get_transaction() as session:
         yield session
+
+
+async def execute_with_retry(
+    operation: Callable[[AsyncSession], Awaitable[Any]],
+    max_retries: int = 3,
+    retry_delay: float = 1.0,
+    exponential_backoff: bool = True,
+) -> Any:
+    """
+    Convenience function to execute database operations with retry logic.
+
+    Args:
+        operation: Async function that takes a session and returns a result
+        max_retries: Maximum number of retry attempts
+        retry_delay: Initial delay between retries in seconds
+        exponential_backoff: Whether to use exponential backoff
+
+    Returns:
+        Result of the operation
+
+    Raises:
+        RuntimeError: If session manager is not initialized
+        DatabaseException: If operation fails after all retries
+    """
+    manager = get_session_manager()
+    return await manager.execute_with_retry(
+        operation, max_retries, retry_delay, exponential_backoff
+    )
+
+
+async def health_check(force: bool = False) -> Dict[str, Any]:
+    """
+    Convenience function to perform database health check.
+
+    Args:
+        force: Force health check even if recently performed
+
+    Returns:
+        Dictionary with health check results
+
+    Raises:
+        RuntimeError: If session manager is not initialized
+    """
+    manager = get_session_manager()
+    return await manager.health_check(force)
+
+
+async def initialize_database(metadata: Optional[MetaData] = None) -> bool:
+    """
+    Convenience function to initialize database.
+
+    Args:
+        metadata: SQLAlchemy metadata object containing table definitions
+
+    Returns:
+        True if initialization successful, False otherwise
+
+    Raises:
+        RuntimeError: If session manager is not initialized
+    """
+    manager = get_session_manager()
+    return await manager.initialize_database(metadata)
+
+
+async def cleanup_database(metadata: Optional[MetaData] = None, drop_all: bool = False) -> bool:
+    """
+    Convenience function to clean up database.
+
+    Args:
+        metadata: SQLAlchemy metadata object containing table definitions
+        drop_all: Whether to drop all tables (use with caution)
+
+    Returns:
+        True if cleanup successful, False otherwise
+
+    Raises:
+        RuntimeError: If session manager is not initialized
+    """
+    manager = get_session_manager()
+    return await manager.cleanup_database(metadata, drop_all)
+
+
+async def get_pool_status() -> Dict[str, Any]:
+    """
+    Convenience function to get connection pool status.
+
+    Returns:
+        Dictionary with pool status information
+
+    Raises:
+        RuntimeError: If session manager is not initialized
+    """
+    manager = get_session_manager()
+    return await manager.get_pool_status()
 
 
 # Create session factory type for type hints

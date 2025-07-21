@@ -12,6 +12,9 @@ from .connection import (
     test_connection,
     close_engine,
     wait_for_database,
+    check_database_exists,
+    get_database_info,
+    create_database_if_not_exists,
 )
 from .session import (
     SessionManager,
@@ -19,6 +22,11 @@ from .session import (
     get_session_manager,
     get_session,
     get_transaction,
+    execute_with_retry,
+    health_check,
+    initialize_database,
+    cleanup_database,
+    get_pool_status,
     AsyncSessionLocal,
 )
 
@@ -30,11 +38,19 @@ __all__ = [
     "test_connection",
     "close_engine",
     "wait_for_database",
+    "check_database_exists",
+    "get_database_info",
+    "create_database_if_not_exists",
     # Session management
     "SessionManager",
     "initialize_session_manager",
     "get_session_manager",
     "get_session",
     "get_transaction",
+    "execute_with_retry",
+    "health_check",
+    "initialize_database",
+    "cleanup_database",
+    "get_pool_status",
     "AsyncSessionLocal",
 ]

@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 import time
 
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
-from sqlalchemy.pool import NullPool, QueuePool
+from sqlalchemy.pool import NullPool, QueuePool, AsyncAdaptedQueuePool
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -83,9 +83,12 @@ def create_engine(
     max_overflow: int = 20,
     pool_timeout: int = 30,
     pool_recycle: int = 3600,
+    pool_reset_on_return: str = "commit",
+    pool_pre_ping: bool = True,
     echo: bool = False,
     echo_pool: bool = False,
     use_null_pool: bool = False,
+    connect_args: Optional[dict] = None,
 ) -> AsyncEngine:
     """
     Create an async SQLAlchemy engine with proper configuration.
@@ -96,9 +99,12 @@ def create_engine(
         max_overflow: Maximum number of connections that can overflow the pool
         pool_timeout: Timeout for getting connection from pool
         pool_recycle: Time in seconds to recycle connections
+        pool_reset_on_return: How to reset connections when returned to pool
+        pool_pre_ping: Whether to validate connections before use
         echo: Whether to echo SQL statements
         echo_pool: Whether to echo pool events
         use_null_pool: Whether to use NullPool (useful for testing)
+        connect_args: Additional connection arguments
         
     Returns:
         Configured async SQLAlchemy engine
@@ -125,17 +131,23 @@ def create_engine(
         "future": True,
     }
     
+    # Add connection arguments if provided
+    if connect_args:
+        engine_kwargs["connect_args"] = connect_args
+    
     # Pool configuration
     if use_null_pool:
         engine_kwargs["poolclass"] = NullPool
     else:
+        # Use AsyncAdaptedQueuePool for async engines
         engine_kwargs.update({
-            "poolclass": QueuePool,
+            "poolclass": AsyncAdaptedQueuePool,
             "pool_size": config.pool_size,
             "max_overflow": config.max_overflow,
             "pool_timeout": config.pool_timeout,
             "pool_recycle": config.pool_recycle,
-            "pool_pre_ping": True,  # Validate connections before use
+            "pool_pre_ping": pool_pre_ping,
+            "pool_reset_on_return": pool_reset_on_return,
         })
     
     try:
@@ -221,6 +233,116 @@ async def wait_for_database(
     )
 
 
+async def check_database_exists(engine: AsyncEngine, database_name: str) -> bool:
+    """
+    Check if a database exists.
+    
+    Args:
+        engine: SQLAlchemy async engine
+        database_name: Name of the database to check
+        
+    Returns:
+        True if database exists, False otherwise
+    """
+    try:
+        async with engine.begin() as conn:
+            result = await conn.execute(
+                text("SELECT 1 FROM pg_database WHERE datname = :db_name"),
+                {"db_name": database_name}
+            )
+            return result.fetchone() is not None
+    except Exception as e:
+        logger.error(f"Error checking if database exists: {e}")
+        return False
+
+
+async def get_database_info(engine: AsyncEngine) -> dict:
+    """
+    Get comprehensive database information.
+    
+    Args:
+        engine: SQLAlchemy async engine
+        
+    Returns:
+        Dictionary with database information
+    """
+    info = {}
+    
+    try:
+        async with engine.begin() as conn:
+            # Get PostgreSQL version
+            version_result = await conn.execute(text("SELECT version()"))
+            info["version"] = version_result.scalar()
+            
+            # Get current database name
+            db_result = await conn.execute(text("SELECT current_database()"))
+            info["database"] = db_result.scalar()
+            
+            # Get current user
+            user_result = await conn.execute(text("SELECT current_user"))
+            info["user"] = user_result.scalar()
+            
+            # Get server encoding
+            encoding_result = await conn.execute(text("SHOW server_encoding"))
+            info["encoding"] = encoding_result.scalar()
+            
+            # Get timezone
+            tz_result = await conn.execute(text("SHOW timezone"))
+            info["timezone"] = tz_result.scalar()
+            
+            # Get connection count
+            conn_result = await conn.execute(
+                text("SELECT count(*) FROM pg_stat_activity WHERE datname = current_database()")
+            )
+            info["active_connections"] = conn_result.scalar()
+            
+    except Exception as e:
+        logger.error(f"Error getting database info: {e}")
+        info["error"] = str(e)
+    
+    return info
+
+
+async def create_database_if_not_exists(
+    admin_engine: AsyncEngine, 
+    database_name: str,
+    owner: Optional[str] = None
+) -> bool:
+    """
+    Create a database if it doesn't exist.
+    
+    Args:
+        admin_engine: SQLAlchemy engine with admin privileges
+        database_name: Name of the database to create
+        owner: Optional owner for the database
+        
+    Returns:
+        True if database was created or already exists, False on error
+    """
+    try:
+        # Check if database already exists
+        if await check_database_exists(admin_engine, database_name):
+            logger.info(f"Database '{database_name}' already exists")
+            return True
+        
+        # Create database
+        async with admin_engine.begin() as conn:
+            # Use autocommit mode for CREATE DATABASE
+            await conn.execute(text("COMMIT"))
+            
+            create_sql = f'CREATE DATABASE "{database_name}"'
+            if owner:
+                create_sql += f' OWNER "{owner}"'
+            
+            await conn.execute(text(create_sql))
+            logger.info(f"Database '{database_name}' created successfully")
+            return True
+            
+    except Exception as e:
+        logger.error(f"Error creating database '{database_name}': {e}")
+        return False
+
+
 def get_database_url(
     host: str,
     port: int = 5432,
@@ -228,6 +350,7 @@ def get_database_url(
     username: str = "postgres",
     password: str = "",
     driver: str = "asyncpg",
+    **kwargs
 ) -> str:
     """
     Construct a PostgreSQL database URL.
@@ -239,6 +362,7 @@ def get_database_url(
         username: Database username
         password: Database password
         driver: Database driver (asyncpg for async)
+        **kwargs: Additional URL parameters
         
     Returns:
         Formatted database URL
@@ -248,4 +372,11 @@ def get_database_url(
     else:
         auth = username
     
-    return f"postgresql+{driver}://{auth}@{host}:{port}/{database}"
+    base_url = f"postgresql+{driver}://{auth}@{host}:{port}/{database}"
+    
+    # Add additional parameters if provided
+    if kwargs:
+        params = "&".join(f"{k}={v}" for k, v in kwargs.items())
+        base_url += f"?{params}"
+    
+    return base_url
