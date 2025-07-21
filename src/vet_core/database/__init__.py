@@ -1,8 +1,8 @@
 """
-Database connection and session management utilities.
+Database connection, session management, and migration utilities.
 
 This module provides async SQLAlchemy engine configuration, session management,
-and database utilities for the veterinary clinic platform.
+migration utilities, and database utilities for the veterinary clinic platform.
 """
 
 from .connection import (
@@ -29,6 +29,13 @@ from .session import (
     get_pool_status,
     AsyncSessionLocal,
 )
+from .migrations import (
+    MigrationManager,
+    run_migrations_async,
+    create_initial_migration,
+    validate_database_schema,
+    get_migration_status,
+)
 
 __all__ = [
     # Connection utilities
@@ -53,4 +60,10 @@ __all__ = [
     "cleanup_database",
     "get_pool_status",
     "AsyncSessionLocal",
+    # Migration utilities
+    "MigrationManager",
+    "run_migrations_async",
+    "create_initial_migration",
+    "validate_database_schema",
+    "get_migration_status",
 ]

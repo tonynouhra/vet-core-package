@@ -1,6 +1,7 @@
 """Alembic environment configuration for vet-core package."""
 
 import asyncio
+import os
 from logging.config import fileConfig
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
@@ -8,8 +9,12 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 
-# Import the base model to ensure all models are registered
-from vet_core.models import BaseModel
+# Import all models to ensure they are registered with SQLAlchemy
+from vet_core.models import (
+    BaseModel,
+    User, Pet, Appointment, Clinic, Veterinarian
+)
+from vet_core.utils.config import EnvironmentConfig
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -30,6 +35,31 @@ target_metadata = BaseModel.metadata
 # ... etc.
 
 
+def get_database_url() -> str:
+    """Get database URL from environment variables or config."""
+    # Try to get from environment first
+    database_url = EnvironmentConfig.get_str("DATABASE_URL")
+    
+    if not database_url:
+        # Fall back to config file
+        database_url = config.get_main_option("sqlalchemy.url")
+    
+    if not database_url:
+        # Build from individual components
+        host = EnvironmentConfig.get_str("DB_HOST", "localhost")
+        port = EnvironmentConfig.get_int("DB_PORT", 5432)
+        database = EnvironmentConfig.get_str("DB_NAME", "vetcore")
+        username = EnvironmentConfig.get_str("DB_USER", "postgres")
+        password = EnvironmentConfig.get_str("DB_PASSWORD", "")
+        
+        if password:
+            database_url = f"postgresql+asyncpg://{username}:{password}@{host}:{port}/{database}"
+        else:
+            database_url = f"postgresql+asyncpg://{username}@{host}:{port}/{database}"
+    
+    return database_url
+
+
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
 
@@ -42,12 +72,14 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
+    url = get_database_url()
     context.configure(
         url=url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        compare_type=True,
+        compare_server_default=True,
     )
 
     with context.begin_transaction():
@@ -55,7 +87,13 @@ def run_migrations_offline() -> None:
 
 
 def do_run_migrations(connection: Connection) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata)
+    context.configure(
+        connection=connection, 
+        target_metadata=target_metadata,
+        compare_type=True,
+        compare_server_default=True,
+        render_as_batch=False,
+    )
 
     with context.begin_transaction():
         context.run_migrations()
@@ -66,9 +104,12 @@ async def run_async_migrations() -> None:
     and associate a connection with the context.
 
     """
+    # Get configuration section and override URL
+    configuration = config.get_section(config.config_ini_section, {})
+    configuration["sqlalchemy.url"] = get_database_url()
 
     connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        configuration,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
