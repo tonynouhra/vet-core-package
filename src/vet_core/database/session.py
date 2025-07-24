@@ -53,10 +53,10 @@ class SessionManager:
             default_config.update(session_config)
 
         self.session_factory = async_sessionmaker(
-            bind=engine, 
+            bind=engine,
             class_=AsyncSession,
             autoflush=default_config.get("autoflush", False),
-            expire_on_commit=default_config.get("expire_on_commit", False)
+            expire_on_commit=default_config.get("expire_on_commit", False),
         )
 
     async def create_session(self) -> AsyncSession:
@@ -115,7 +115,9 @@ class SessionManager:
                     logger.error(f"Transaction error, rolling back: {e}")
                     raise
 
-    async def execute_in_transaction(self, operation: Any, *args: Any, **kwargs: Any) -> Any:
+    async def execute_in_transaction(
+        self, operation: Any, *args: Any, **kwargs: Any
+    ) -> Any:
         """
         Execute an operation within a transaction.
 

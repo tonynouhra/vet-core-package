@@ -426,17 +426,17 @@ class LoggingConfigurator:
 
         # Configure logging with proper type handling
         basic_config_args = {}
-        if 'level' in logging_config:
-            basic_config_args['level'] = logging_config['level']
-        if 'format' in logging_config:
-            basic_config_args['format'] = logging_config['format']
-        if 'datefmt' in logging_config:
-            basic_config_args['datefmt'] = logging_config['datefmt']
-        if 'filename' in logging_config:
-            basic_config_args['filename'] = logging_config['filename']
-        if 'filemode' in logging_config:
-            basic_config_args['filemode'] = logging_config['filemode']
-        
+        if "level" in logging_config:
+            basic_config_args["level"] = logging_config["level"]
+        if "format" in logging_config:
+            basic_config_args["format"] = logging_config["format"]
+        if "datefmt" in logging_config:
+            basic_config_args["datefmt"] = logging_config["datefmt"]
+        if "filename" in logging_config:
+            basic_config_args["filename"] = logging_config["filename"]
+        if "filemode" in logging_config:
+            basic_config_args["filemode"] = logging_config["filemode"]
+
         logging.basicConfig(**basic_config_args)
 
     @staticmethod

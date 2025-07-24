@@ -490,7 +490,9 @@ class ErrorMessageFormatter:
                     {"message": error.message, "code": error.code or ""}
                 )
             else:
-                general_errors.append({"message": error.message, "code": error.code or ""})
+                general_errors.append(
+                    {"message": error.message, "code": error.code or ""}
+                )
 
         result = {"success": False, "errors": formatted_errors}
 
