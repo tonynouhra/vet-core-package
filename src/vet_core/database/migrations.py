@@ -20,7 +20,7 @@ from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from ..exceptions import  MigrationException
+from ..exceptions import MigrationException
 
 logger = logging.getLogger(__name__)
 
