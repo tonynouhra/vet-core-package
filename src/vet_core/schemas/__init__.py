@@ -5,35 +5,65 @@ This module contains Pydantic schemas for API request/response validation
 and data serialization across the veterinary clinic platform.
 """
 
-# Core schemas will be imported as they're implemented
-from .user import (
-    UserCreate, UserUpdate, UserResponse, UserAdminResponse, UserListResponse,
-    UserRoleUpdate, UserStatusUpdate, UserPreferencesUpdate,
-    PetOwnerCreate, VeterinarianCreate, VetTechCreate, ClinicAdminCreate
-)
-from .pet import (
-    PetCreate, PetUpdate, PetResponse, PetListResponse,
-    PetMedicalHistoryUpdate, PetVaccinationUpdate, PetWeightUpdate
-)
 from .appointment import (
-    AppointmentCreate, AppointmentUpdate, AppointmentResponse, AppointmentListResponse,
-    AppointmentStatusUpdate, AppointmentReschedule, AppointmentCompletion,
-    AppointmentSlotAvailability
+    AppointmentCompletion,
+    AppointmentCreate,
+    AppointmentListResponse,
+    AppointmentReschedule,
+    AppointmentResponse,
+    AppointmentSlotAvailability,
+    AppointmentStatusUpdate,
+    AppointmentUpdate,
 )
 from .clinic import (
-    ClinicCreate, ClinicUpdate, ClinicResponse, ClinicListResponse,
-    ClinicStatusUpdate, ClinicSearchFilters
+    ClinicCreate,
+    ClinicListResponse,
+    ClinicResponse,
+    ClinicSearchFilters,
+    ClinicStatusUpdate,
+    ClinicUpdate,
+)
+from .pet import (
+    PetCreate,
+    PetListResponse,
+    PetMedicalHistoryUpdate,
+    PetResponse,
+    PetUpdate,
+    PetVaccinationUpdate,
+    PetWeightUpdate,
+)
+
+# Core schemas will be imported as they're implemented
+from .user import (
+    ClinicAdminCreate,
+    PetOwnerCreate,
+    UserAdminResponse,
+    UserCreate,
+    UserListResponse,
+    UserPreferencesUpdate,
+    UserResponse,
+    UserRoleUpdate,
+    UserStatusUpdate,
+    UserUpdate,
+    VeterinarianCreate,
+    VetTechCreate,
 )
 from .veterinarian import (
-    VeterinarianCreate, VeterinarianUpdate, VeterinarianResponse, VeterinarianListResponse,
-    VeterinarianStatusUpdate, VeterinarianLicenseUpdate, VeterinarianAvailabilityUpdate,
-    VeterinarianSearchFilters, VeterinarianRatingUpdate
+    VeterinarianAvailabilityUpdate,
+    VeterinarianCreate,
+    VeterinarianLicenseUpdate,
+    VeterinarianListResponse,
+    VeterinarianRatingUpdate,
+    VeterinarianResponse,
+    VeterinarianSearchFilters,
+    VeterinarianStatusUpdate,
+    VeterinarianUpdate,
 )
 
 __all__ = [
     # User schemas
     "UserCreate",
-    "UserUpdate", 
+    "UserUpdate",
     "UserResponse",
     "UserAdminResponse",
     "UserListResponse",

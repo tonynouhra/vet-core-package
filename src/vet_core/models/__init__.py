@@ -5,15 +5,26 @@ This module contains SQLAlchemy models for all core entities in the
 veterinary clinic platform.
 """
 
+from .appointment import (
+    Appointment,
+    AppointmentPriority,
+    AppointmentStatus,
+    ServiceType,
+)
+
 # Base model will be imported by all other models
 from .base import Base, BaseModel
+from .clinic import Clinic, ClinicStatus, ClinicType
+from .pet import Pet, PetGender, PetSize, PetSpecies, PetStatus
 
 # Core entity models
 from .user import User, UserRole, UserStatus
-from .pet import Pet, PetSpecies, PetGender, PetSize, PetStatus
-from .appointment import Appointment, AppointmentStatus, ServiceType, AppointmentPriority
-from .clinic import Clinic, ClinicStatus, ClinicType
-from .veterinarian import Veterinarian, VeterinarianStatus, LicenseStatus, EmploymentType
+from .veterinarian import (
+    EmploymentType,
+    LicenseStatus,
+    Veterinarian,
+    VeterinarianStatus,
+)
 
 __all__ = [
     "Base",
@@ -23,7 +34,7 @@ __all__ = [
     "UserStatus",
     "Pet",
     "PetSpecies",
-    "PetGender", 
+    "PetGender",
     "PetSize",
     "PetStatus",
     "Appointment",

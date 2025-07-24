@@ -5,21 +5,20 @@ This module defines the exception hierarchy and custom exceptions
 used throughout the veterinary clinic platform.
 """
 
-from .core_exceptions import (
-    VetCoreException,
-    DatabaseException,
-    ConnectionException,
-    TransactionException,
-    MigrationException,
-    ValidationException,
-    SchemaValidationException,
+from .core_exceptions import (  # Utility functions
     BusinessRuleException,
     ConfigurationException,
+    ConnectionException,
     DatabaseConfigException,
+    DatabaseException,
     EnvironmentException,
-    # Utility functions
-    format_validation_errors,
+    MigrationException,
+    SchemaValidationException,
+    TransactionException,
+    ValidationException,
+    VetCoreException,
     create_error_response,
+    format_validation_errors,
     handle_database_retry,
     log_exception_context,
 )

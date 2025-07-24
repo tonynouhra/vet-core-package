@@ -62,14 +62,22 @@ class VetCoreException(Exception):
             Dictionary with debug information including traceback
         """
         debug_info = self.to_dict()
-        debug_info.update({
-            "traceback": traceback.format_exc() if traceback.format_exc().strip() != "NoneType: None" else None,
-            "module": self.__class__.__module__,
-            "class_name": self.__class__.__name__,
-        })
+        debug_info.update(
+            {
+                "traceback": (
+                    traceback.format_exc()
+                    if traceback.format_exc().strip() != "NoneType: None"
+                    else None
+                ),
+                "module": self.__class__.__module__,
+                "class_name": self.__class__.__name__,
+            }
+        )
         return debug_info
 
-    def log_error(self, logger: Optional[logging.Logger] = None, level: int = logging.ERROR) -> None:
+    def log_error(
+        self, logger: Optional[logging.Logger] = None, level: int = logging.ERROR
+    ) -> None:
         """
         Log the exception with appropriate level and context.
 
@@ -88,7 +96,11 @@ class VetCoreException(Exception):
             "details": self.details,
         }
 
-        logger.log(level, f"Exception occurred: {self.message}", extra={"exception_data": log_data})
+        logger.log(
+            level,
+            f"Exception occurred: {self.message}",
+            extra={"exception_data": log_data},
+        )
 
     def __str__(self) -> str:
         """String representation of the exception."""
@@ -128,11 +140,13 @@ class DatabaseException(VetCoreException):
         if original_error and "original_error" not in self.details:
             self.details["original_error"] = str(original_error)
 
-        self.details.update({
-            "retry_count": retry_count,
-            "max_retries": max_retries,
-            "retryable": self.is_retryable(),
-        })
+        self.details.update(
+            {
+                "retry_count": retry_count,
+                "max_retries": max_retries,
+                "retryable": self.is_retryable(),
+            }
+        )
 
     def is_retryable(self) -> bool:
         """
@@ -155,7 +169,7 @@ class DatabaseException(VetCoreException):
 
         # Exponential backoff: 1s, 2s, 4s, 8s, etc.
         base_delay = 1.0
-        return base_delay * (2 ** self.retry_count)
+        return base_delay * (2**self.retry_count)
 
     def increment_retry(self) -> "DatabaseException":
         """
@@ -174,7 +188,7 @@ class DatabaseException(VetCoreException):
                 retry_count=self.retry_count + 1,
                 max_retries=self.max_retries,
             )
-        
+
         # For subclasses, we need to handle them specifically
         # This is a fallback that creates a new instance with updated retry count
         new_exception = self.__class__.__new__(self.__class__)
@@ -184,14 +198,16 @@ class DatabaseException(VetCoreException):
         new_exception.original_error = self.original_error
         new_exception.retry_count = self.retry_count + 1
         new_exception.max_retries = self.max_retries
-        
+
         # Update details with new retry information
-        new_exception.details.update({
-            "retry_count": new_exception.retry_count,
-            "max_retries": new_exception.max_retries,
-            "retryable": new_exception.is_retryable(),
-        })
-        
+        new_exception.details.update(
+            {
+                "retry_count": new_exception.retry_count,
+                "max_retries": new_exception.max_retries,
+                "retryable": new_exception.is_retryable(),
+            }
+        )
+
         return new_exception
 
 
@@ -279,7 +295,7 @@ class ConnectionException(DatabaseException):
         if "database_url" in self.details:
             # We need to reconstruct the original URL for the new instance
             database_url = self.details["database_url"]
-        
+
         return ConnectionException(
             message=self.message,
             database_url=database_url,
@@ -291,7 +307,7 @@ class ConnectionException(DatabaseException):
 
 class TransactionException(DatabaseException):
     """Exception raised when database transaction fails."""
-    
+
     def __init__(
         self,
         message: str = "Database transaction failed",
@@ -300,7 +316,7 @@ class TransactionException(DatabaseException):
     ):
         """
         Initialize transaction exception.
-        
+
         Args:
             message: Error message
             operation: Description of the failed operation
@@ -309,7 +325,7 @@ class TransactionException(DatabaseException):
         details = {}
         if operation:
             details["operation"] = operation
-        
+
         super().__init__(
             message=message,
             error_code="DATABASE_TRANSACTION_ERROR",
@@ -334,7 +350,7 @@ class TransactionException(DatabaseException):
 
 class MigrationException(DatabaseException):
     """Exception raised when database migration fails."""
-    
+
     def __init__(
         self,
         message: str = "Database migration failed",
@@ -343,7 +359,7 @@ class MigrationException(DatabaseException):
     ):
         """
         Initialize migration exception.
-        
+
         Args:
             message: Error message
             migration_version: Version of the failed migration
@@ -352,7 +368,7 @@ class MigrationException(DatabaseException):
         details = {}
         if migration_version:
             details["migration_version"] = migration_version
-        
+
         super().__init__(
             message=message,
             error_code="DATABASE_MIGRATION_ERROR",
@@ -377,7 +393,7 @@ class MigrationException(DatabaseException):
 
 class ValidationException(VetCoreException):
     """Base exception for data validation errors."""
-    
+
     def __init__(
         self,
         message: str = "Validation failed",
@@ -387,7 +403,7 @@ class ValidationException(VetCoreException):
     ):
         """
         Initialize validation exception.
-        
+
         Args:
             message: Error message
             field: Field that failed validation
@@ -401,7 +417,7 @@ class ValidationException(VetCoreException):
             details["value"] = str(value)
         if validation_errors:
             details["validation_errors"] = validation_errors
-        
+
         super().__init__(
             message=message,
             error_code="VALIDATION_ERROR",
@@ -411,7 +427,7 @@ class ValidationException(VetCoreException):
 
 class SchemaValidationException(ValidationException):
     """Exception raised when Pydantic schema validation fails."""
-    
+
     def __init__(
         self,
         message: str = "Schema validation failed",
@@ -420,7 +436,7 @@ class SchemaValidationException(ValidationException):
     ):
         """
         Initialize schema validation exception.
-        
+
         Args:
             message: Error message
             schema_name: Name of the schema that failed validation
@@ -429,7 +445,7 @@ class SchemaValidationException(ValidationException):
         details = {}
         if schema_name:
             details["schema_name"] = schema_name
-        
+
         super().__init__(
             message=message,
             field=None,
@@ -443,7 +459,7 @@ class SchemaValidationException(ValidationException):
 
 class BusinessRuleException(ValidationException):
     """Exception raised when business rule validation fails."""
-    
+
     def __init__(
         self,
         message: str = "Business rule validation failed",
@@ -452,7 +468,7 @@ class BusinessRuleException(ValidationException):
     ):
         """
         Initialize business rule exception.
-        
+
         Args:
             message: Error message
             rule_name: Name of the business rule that failed
@@ -463,7 +479,7 @@ class BusinessRuleException(ValidationException):
             details["rule_name"] = rule_name
         if context:
             details["context"] = context
-        
+
         super().__init__(
             message=message,
             field=None,
@@ -477,7 +493,7 @@ class BusinessRuleException(ValidationException):
 
 class ConfigurationException(VetCoreException):
     """Base exception for configuration-related errors."""
-    
+
     def __init__(
         self,
         message: str = "Configuration error",
@@ -486,7 +502,7 @@ class ConfigurationException(VetCoreException):
     ):
         """
         Initialize configuration exception.
-        
+
         Args:
             message: Error message
             config_key: Configuration key that caused the error
@@ -497,30 +513,32 @@ class ConfigurationException(VetCoreException):
             details["config_key"] = config_key
         if config_value:
             # Sanitize sensitive configuration values
-            details["config_value"] = self._sanitize_config_value(config_key, config_value)
-        
+            details["config_value"] = self._sanitize_config_value(
+                config_key, config_value
+            )
+
         super().__init__(
             message=message,
             error_code="CONFIGURATION_ERROR",
             details=details,
         )
-    
+
     @staticmethod
     def _sanitize_config_value(key: Optional[str], value: str) -> str:
         """Sanitize configuration values to avoid exposing secrets."""
         if not key:
             return "[REDACTED]"
-        
+
         sensitive_keys = ["password", "secret", "key", "token", "credential"]
         if any(sensitive in key.lower() for sensitive in sensitive_keys):
             return "[REDACTED]"
-        
+
         return value
 
 
 class DatabaseConfigException(ConfigurationException):
     """Exception raised when database configuration is invalid."""
-    
+
     def __init__(
         self,
         message: str = "Database configuration error",
@@ -529,7 +547,7 @@ class DatabaseConfigException(ConfigurationException):
     ):
         """
         Initialize database configuration exception.
-        
+
         Args:
             message: Error message
             config_key: Configuration key that caused the error
@@ -541,7 +559,7 @@ class DatabaseConfigException(ConfigurationException):
 
 class EnvironmentException(ConfigurationException):
     """Exception raised when environment configuration is invalid."""
-    
+
     def __init__(
         self,
         message: str = "Environment configuration error",
@@ -550,7 +568,7 @@ class EnvironmentException(ConfigurationException):
     ):
         """
         Initialize environment exception.
-        
+
         Args:
             message: Error message
             env_var: Environment variable that caused the error
@@ -562,26 +580,27 @@ class EnvironmentException(ConfigurationException):
 
 # Utility functions for exception handling and error formatting
 
+
 def format_validation_errors(errors: List[Dict[str, Any]]) -> Dict[str, List[str]]:
     """
     Format Pydantic validation errors into a user-friendly structure.
-    
+
     Args:
         errors: List of Pydantic validation errors
-        
+
     Returns:
         Dictionary mapping field names to lists of error messages
     """
     formatted_errors = {}
-    
+
     for error in errors:
         field_path = ".".join(str(loc) for loc in error.get("loc", []))
         if not field_path:
             field_path = "root"
-            
+
         message = error.get("msg", "Validation error")
         error_type = error.get("type", "unknown")
-        
+
         # Create a more user-friendly error message
         if error_type == "value_error":
             formatted_message = message
@@ -591,27 +610,27 @@ def format_validation_errors(errors: List[Dict[str, Any]]) -> Dict[str, List[str
             formatted_message = "This field is required"
         else:
             formatted_message = f"{message} (type: {error_type})"
-        
+
         if field_path not in formatted_errors:
             formatted_errors[field_path] = []
         formatted_errors[field_path].append(formatted_message)
-    
+
     return formatted_errors
 
 
 def create_error_response(
     exception: VetCoreException,
     include_debug: bool = False,
-    include_traceback: bool = False
+    include_traceback: bool = False,
 ) -> Dict[str, Any]:
     """
     Create a standardized error response from an exception.
-    
+
     Args:
         exception: The exception to format
         include_debug: Whether to include debug information
         include_traceback: Whether to include traceback information
-        
+
     Returns:
         Standardized error response dictionary
     """
@@ -621,13 +640,13 @@ def create_error_response(
             "type": exception.__class__.__name__,
             "code": exception.error_code,
             "message": exception.message,
-        }
+        },
     }
-    
+
     # Add details if they exist
     if exception.details:
         response["error"]["details"] = exception.details
-    
+
     # Add debug information if requested
     if include_debug:
         debug_info = exception.get_debug_info()
@@ -636,10 +655,10 @@ def create_error_response(
             "module": debug_info["module"],
             "class_name": debug_info["class_name"],
         }
-        
+
         if include_traceback and debug_info.get("traceback"):
             response["debug"]["traceback"] = debug_info["traceback"]
-    
+
     return response
 
 
@@ -647,67 +666,69 @@ def handle_database_retry(
     operation_name: str,
     max_retries: int = 3,
     base_delay: float = 1.0,
-    logger: Optional[logging.Logger] = None
+    logger: Optional[logging.Logger] = None,
 ):
     """
     Decorator for handling database operations with retry logic.
-    
+
     Args:
         operation_name: Name of the operation for logging
         max_retries: Maximum number of retry attempts
         base_delay: Base delay for exponential backoff
         logger: Logger instance to use
-        
+
     Returns:
         Decorator function
     """
+
     def decorator(func):
         async def wrapper(*args, **kwargs):
             if logger is None:
                 operation_logger = logging.getLogger(__name__)
             else:
                 operation_logger = logger
-                
+
             last_exception = None
-            
+
             for attempt in range(max_retries + 1):
                 try:
                     return await func(*args, **kwargs)
                 except DatabaseException as e:
                     last_exception = e
-                    
+
                     if not e.is_retryable() or attempt == max_retries:
                         operation_logger.error(
                             f"Database operation '{operation_name}' failed after {attempt + 1} attempts",
-                            extra={"exception_data": e.to_dict()}
+                            extra={"exception_data": e.to_dict()},
                         )
                         raise
-                    
+
                     # Calculate delay and wait
-                    delay = base_delay * (2 ** attempt)
+                    delay = base_delay * (2**attempt)
                     operation_logger.warning(
                         f"Database operation '{operation_name}' failed (attempt {attempt + 1}/{max_retries + 1}), "
                         f"retrying in {delay}s",
-                        extra={"exception_data": e.to_dict()}
+                        extra={"exception_data": e.to_dict()},
                     )
-                    
+
                     await asyncio.sleep(delay)
-                    
+
                     # Create new exception with incremented retry count
                     last_exception = e.increment_retry()
                 except Exception as e:
                     # Non-database exceptions are not retryable
                     operation_logger.error(
                         f"Non-retryable error in database operation '{operation_name}'",
-                        extra={"error": str(e)}
+                        extra={"error": str(e)},
                     )
                     raise
-            
+
             # This should never be reached, but just in case
             if last_exception:
                 raise last_exception
-            
+
         return wrapper
+
     return decorator
 
 
@@ -715,11 +736,11 @@ def log_exception_context(
     exception: Exception,
     context: Dict[str, Any],
     logger: Optional[logging.Logger] = None,
-    level: int = logging.ERROR
+    level: int = logging.ERROR,
 ) -> None:
     """
     Log an exception with additional context information.
-    
+
     Args:
         exception: The exception to log
         context: Additional context information
@@ -728,11 +749,15 @@ def log_exception_context(
     """
     if logger is None:
         logger = logging.getLogger(__name__)
-    
+
     if isinstance(exception, VetCoreException):
         log_data = exception.to_dict()
         log_data["context"] = context
-        logger.log(level, f"Exception with context: {exception.message}", extra={"exception_data": log_data})
+        logger.log(
+            level,
+            f"Exception with context: {exception.message}",
+            extra={"exception_data": log_data},
+        )
     else:
         logger.log(
             level,
@@ -740,6 +765,6 @@ def log_exception_context(
             extra={
                 "exception_type": exception.__class__.__name__,
                 "exception_message": str(exception),
-                "context": context
-            }
+                "context": context,
+            },
         )

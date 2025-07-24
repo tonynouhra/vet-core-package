@@ -6,13 +6,14 @@ testing environments and scenarios.
 """
 
 import os
-from typing import Dict, Any, Optional
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any, Dict, Optional
 
 
 class TestEnvironment(Enum):
     """Test environment types."""
+
     UNIT = "unit"
     INTEGRATION = "integration"
     PERFORMANCE = "performance"
@@ -22,20 +23,21 @@ class TestEnvironment(Enum):
 @dataclass
 class DatabaseTestConfig:
     """Configuration for test database connections."""
+
     url: str
     echo: bool = False
     pool_size: int = 5
     max_overflow: int = 10
     use_null_pool: bool = True
     connect_timeout: int = 10
-    
+
     @classmethod
     def from_environment(cls) -> "DatabaseTestConfig":
         """Create config from environment variables."""
         return cls(
             url=os.getenv(
                 "TEST_DATABASE_URL",
-                "postgresql+asyncpg://postgres:postgres@localhost:5432/vet_core_test"
+                "postgresql+asyncpg://postgres:postgres@localhost:5432/vet_core_test",
             ),
             echo=os.getenv("TEST_DB_ECHO", "false").lower() == "true",
             pool_size=int(os.getenv("TEST_DB_POOL_SIZE", "5")),
@@ -48,6 +50,7 @@ class DatabaseTestConfig:
 @dataclass
 class TestConfig:
     """Main test configuration."""
+
     environment: TestEnvironment
     database: DatabaseTestConfig
     parallel_workers: int = 1
@@ -55,7 +58,7 @@ class TestConfig:
     cleanup_after_tests: bool = True
     generate_coverage: bool = True
     verbose_logging: bool = False
-    
+
     @classmethod
     def from_environment(cls) -> "TestConfig":
         """Create config from environment variables."""
@@ -64,7 +67,7 @@ class TestConfig:
             environment = TestEnvironment(env_name)
         except ValueError:
             environment = TestEnvironment.UNIT
-        
+
         return cls(
             environment=environment,
             database=DatabaseTestConfig.from_environment(),
@@ -88,7 +91,7 @@ UNIT_TEST_CONFIG = {
 INTEGRATION_TEST_CONFIG = {
     "database_url": os.getenv(
         "INTEGRATION_TEST_DATABASE_URL",
-        "postgresql+asyncpg://postgres:postgres@localhost:5432/vet_core_integration_test"
+        "postgresql+asyncpg://postgres:postgres@localhost:5432/vet_core_integration_test",
     ),
     "echo": False,
     "use_null_pool": False,
@@ -99,7 +102,7 @@ INTEGRATION_TEST_CONFIG = {
 PERFORMANCE_TEST_CONFIG = {
     "database_url": os.getenv(
         "PERFORMANCE_TEST_DATABASE_URL",
-        "postgresql+asyncpg://postgres:postgres@localhost:5432/vet_core_performance_test"
+        "postgresql+asyncpg://postgres:postgres@localhost:5432/vet_core_performance_test",
     ),
     "echo": False,
     "use_null_pool": False,
@@ -110,7 +113,7 @@ PERFORMANCE_TEST_CONFIG = {
 CI_TEST_CONFIG = {
     "database_url": os.getenv(
         "CI_DATABASE_URL",
-        "postgresql+asyncpg://postgres:postgres@localhost:5432/vet_core_ci_test"
+        "postgresql+asyncpg://postgres:postgres@localhost:5432/vet_core_ci_test",
     ),
     "echo": False,
     "use_null_pool": True,
@@ -122,57 +125,59 @@ CI_TEST_CONFIG = {
 def get_test_config(environment: Optional[str] = None) -> Dict[str, Any]:
     """
     Get test configuration for the specified environment.
-    
+
     Args:
         environment: Test environment name (unit, integration, performance, ci)
-        
+
     Returns:
         Configuration dictionary for the environment
     """
     if environment is None:
         environment = os.getenv("TEST_ENVIRONMENT", "unit").lower()
-    
+
     config_map = {
         "unit": UNIT_TEST_CONFIG,
         "integration": INTEGRATION_TEST_CONFIG,
         "performance": PERFORMANCE_TEST_CONFIG,
         "ci": CI_TEST_CONFIG,
     }
-    
+
     return config_map.get(environment, UNIT_TEST_CONFIG)
 
 
 def is_postgresql_available() -> bool:
     """
     Check if PostgreSQL is available for testing.
-    
+
     Returns:
         True if PostgreSQL is available, False otherwise
     """
     try:
-        import asyncpg
         import asyncio
-        
+
+        import asyncpg
+
         async def check_connection():
             try:
                 config = DatabaseTestConfig.from_environment()
                 # Parse URL to get connection parameters
                 from urllib.parse import urlparse
+
                 parsed = urlparse(config.url)
-                
+
                 conn = await asyncpg.connect(
                     host=parsed.hostname,
                     port=parsed.port or 5432,
                     user=parsed.username,
                     password=parsed.password,
-                    database=parsed.path.lstrip('/') if parsed.path else 'postgres',
-                    timeout=5
+                    database=parsed.path.lstrip("/") if parsed.path else "postgres",
+                    timeout=5,
                 )
                 await conn.close()
                 return True
             except Exception:
                 return False
-        
+
         return asyncio.run(check_connection())
     except ImportError:
         return False
@@ -181,14 +186,14 @@ def is_postgresql_available() -> bool:
 def should_use_postgresql() -> bool:
     """
     Determine if tests should use PostgreSQL or fall back to SQLite.
-    
+
     Returns:
         True if PostgreSQL should be used, False for SQLite fallback
     """
     # Force SQLite for unit tests unless explicitly requested
     if os.getenv("TEST_ENVIRONMENT", "unit").lower() == "unit":
         return os.getenv("FORCE_POSTGRESQL", "false").lower() == "true"
-    
+
     # Use PostgreSQL for integration and performance tests if available
     return is_postgresql_available()
 
@@ -196,7 +201,7 @@ def should_use_postgresql() -> bool:
 def get_database_url_for_tests() -> str:
     """
     Get the appropriate database URL for the current test environment.
-    
+
     Returns:
         Database URL string
     """
@@ -232,10 +237,10 @@ PERFORMANCE_THRESHOLDS = {
 def get_performance_threshold(operation: str) -> float:
     """
     Get performance threshold for an operation.
-    
+
     Args:
         operation: Operation name
-        
+
     Returns:
         Threshold in seconds
     """
@@ -255,10 +260,10 @@ TEST_DATA_LIMITS = {
 def get_test_data_limit(entity: str) -> int:
     """
     Get test data limit for an entity type.
-    
+
     Args:
         entity: Entity name
-        
+
     Returns:
         Maximum number of entities to create in tests
     """
@@ -269,20 +274,20 @@ def get_test_data_limit(entity: str) -> int:
 def configure_test_logging():
     """Configure logging for tests."""
     import logging
-    
+
     # Set log level based on environment
     if os.getenv("TEST_VERBOSE", "false").lower() == "true":
         log_level = logging.DEBUG
     else:
         log_level = logging.WARNING
-    
+
     # Configure root logger
     logging.basicConfig(
         level=log_level,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        handlers=[logging.StreamHandler()]
+        handlers=[logging.StreamHandler()],
     )
-    
+
     # Suppress noisy loggers in tests
     logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
     logging.getLogger("sqlalchemy.pool").setLevel(logging.WARNING)
@@ -301,19 +306,19 @@ ISOLATION_SETTINGS = {
 def get_isolation_setting(setting: str) -> bool:
     """
     Get test isolation setting.
-    
+
     Args:
         setting: Setting name
-        
+
     Returns:
         Setting value
     """
     env_var = f"TEST_ISOLATION_{setting.upper()}"
     env_value = os.getenv(env_var)
-    
+
     if env_value is not None:
         return env_value.lower() == "true"
-    
+
     return ISOLATION_SETTINGS.get(setting, True)
 
 
