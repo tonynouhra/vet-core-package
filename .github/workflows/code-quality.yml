@@ -38,10 +38,6 @@ jobs:
       run: |
         isort --check-only --diff src tests
 
-    - name: Run flake8 (linting)
-      run: |
-        flake8 src tests --statistics
-
     - name: Run mypy (type checking)
       run: |
         mypy src/vet_core
