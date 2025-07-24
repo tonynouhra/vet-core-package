@@ -38,7 +38,6 @@ from vet_core.models import (
 from vet_core.utils import datetime_utils, validation
 from vet_core.exceptions import (
     BusinessRuleException,
-    execute_with_retry,
     handle_database_retry
 )
 
