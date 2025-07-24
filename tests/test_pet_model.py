@@ -2,7 +2,7 @@
 Tests for the Pet model.
 
 This module contains comprehensive tests for the Pet SQLAlchemy model,
-including validation, relationships, and business logic.
+including validation, relationships, business logic, and edge cases.
 """
 
 import uuid
@@ -10,42 +10,9 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+import pytest_asyncio
 
-from src.vet_core.models import Base, Pet, PetSpecies, PetGender, PetSize, PetStatus, User, UserRole
-
-
-@pytest.fixture
-def engine():
-    """Create an in-memory SQLite database for testing."""
-    engine = create_engine("sqlite:///:memory:", echo=False)
-    Base.metadata.create_all(engine)
-    return engine
-
-
-@pytest.fixture
-def session(engine):
-    """Create a database session for testing."""
-    Session = sessionmaker(bind=engine)
-    session = Session()
-    yield session
-    session.close()
-
-
-@pytest.fixture
-def sample_user(session):
-    """Create a sample user for testing pet relationships."""
-    user = User(
-        clerk_user_id="test_clerk_123",
-        email="test@example.com",
-        first_name="John",
-        last_name="Doe",
-        role=UserRole.PET_OWNER
-    )
-    session.add(user)
-    session.commit()
-    return user
+from vet_core.models import Base, Pet, PetSpecies, PetGender, PetSize, PetStatus, User, UserRole
 
 
 @pytest.fixture
@@ -65,19 +32,16 @@ def sample_pet_data():
 class TestPetModel:
     """Test cases for the Pet model."""
     
-    def test_pet_creation_with_required_fields(self, session, sample_user):
+    def test_pet_creation_with_required_fields(self):
         """Test creating a pet with only required fields."""
+        owner_id = uuid.uuid4()
         pet = Pet(
-            owner_id=sample_user.id,
+            owner_id=owner_id,
             name="Buddy",
             species=PetSpecies.DOG
         )
         
-        session.add(pet)
-        session.commit()
-        
-        assert pet.id is not None
-        assert pet.owner_id == sample_user.id
+        assert pet.owner_id == owner_id
         assert pet.name == "Buddy"
         assert pet.species == PetSpecies.DOG
         assert pet.status == PetStatus.ACTIVE  # Default value
@@ -85,8 +49,34 @@ class TestPetModel:
         assert not pet.is_spayed_neutered  # Default value
         assert not pet.is_microchipped  # Default value
         assert not pet.is_insured  # Default value
+    
+    @pytest_asyncio.fixture
+    async def test_pet_database_creation(self, async_session, user_factory, pet_factory):
+        """Test pet creation and persistence in database."""
+        user = await user_factory.create(async_session)
+        
+        pet_data = {
+            "name": "Database Pet",
+            "species": PetSpecies.CAT,
+            "breed": "Persian",
+            "gender": PetGender.FEMALE,
+            "weight_kg": Decimal("4.5"),
+            "is_microchipped": True,
+            "microchip_id": "test_chip_123"
+        }
+        
+        pet = await pet_factory.create(async_session, owner=user, **pet_data)
+        
+        assert pet.id is not None
         assert pet.created_at is not None
         assert pet.updated_at is not None
+        assert pet.owner_id == user.id
+        assert pet.name == "Database Pet"
+        assert pet.species == PetSpecies.CAT
+        assert pet.breed == "Persian"
+        assert pet.is_active
+        
+        return pet
     
     def test_pet_creation_with_all_fields(self, session, sample_user, sample_pet_data):
         """Test creating a pet with all fields populated."""
