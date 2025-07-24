@@ -109,7 +109,7 @@ jobs:
 
     - name: Upload performance results
       if: matrix.test-type == 'performance'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: performance-results
         path: benchmark-*.json
@@ -146,7 +146,7 @@ jobs:
         twine check dist/*
 
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: prerelease-dist
         path: dist/
@@ -266,7 +266,7 @@ jobs:
         semgrep --config=auto $(python -c "import vet_core; print(vet_core.__path__[0])") --json --output=semgrep-prerelease.json || true
 
     - name: Upload security reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: prerelease-security-reports
         path: |
