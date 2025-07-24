@@ -17,9 +17,15 @@ from .core_exceptions import (
     ConfigurationException,
     DatabaseConfigException,
     EnvironmentException,
+    # Utility functions
+    format_validation_errors,
+    create_error_response,
+    handle_database_retry,
+    log_exception_context,
 )
 
 __all__ = [
+    # Exception classes
     "VetCoreException",
     "DatabaseException",
     "ConnectionException",
@@ -31,4 +37,9 @@ __all__ = [
     "ConfigurationException",
     "DatabaseConfigException",
     "EnvironmentException",
+    # Utility functions
+    "format_validation_errors",
+    "create_error_response",
+    "handle_database_retry",
+    "log_exception_context",
 ]
