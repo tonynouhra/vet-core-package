@@ -405,12 +405,12 @@ def validate_species_breed(
 
 
 # Validation decorators
-def validate_required(field_name: str):
+def validate_required(field_name: str) -> Callable:
     """Decorator to validate that a field is required."""
 
     def decorator(func: Callable) -> Callable:
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args, **kwargs) -> Any:
             # This is a placeholder for field validation logic
             # In practice, this would be used with Pydantic or similar
             return func(*args, **kwargs)
@@ -420,12 +420,12 @@ def validate_required(field_name: str):
     return decorator
 
 
-def validate_length(min_length: int = 0, max_length: Optional[int] = None):
+def validate_length(min_length: int = 0, max_length: Optional[int] = None) -> Callable:
     """Decorator to validate string length."""
 
     def decorator(func: Callable) -> Callable:
         @wraps(func)
-        def wrapper(value: str, *args, **kwargs):
+        def wrapper(value: str, *args, **kwargs) -> Any:
             if len(value) < min_length:
                 raise ValidationError(
                     f"Value must be at least {min_length} characters", code="too_short"
@@ -444,12 +444,12 @@ def validate_length(min_length: int = 0, max_length: Optional[int] = None):
 def validate_range(
     min_value: Optional[Union[int, float]] = None,
     max_value: Optional[Union[int, float]] = None,
-):
+) -> Callable:
     """Decorator to validate numeric ranges."""
 
     def decorator(func: Callable) -> Callable:
         @wraps(func)
-        def wrapper(value: Union[int, float], *args, **kwargs):
+        def wrapper(value: Union[int, float], *args, **kwargs) -> Any:
             if min_value is not None and value < min_value:
                 raise ValidationError(
                     f"Value must be at least {min_value}", code="too_low"
@@ -479,18 +479,18 @@ class ErrorMessageFormatter:
         Returns:
             Formatted error response
         """
-        formatted_errors = {}
-        general_errors = []
+        formatted_errors: Dict[str, List[Dict[str, str]]] = {}
+        general_errors: List[Dict[str, str]] = []
 
         for error in errors:
             if error.field:
                 if error.field not in formatted_errors:
                     formatted_errors[error.field] = []
                 formatted_errors[error.field].append(
-                    {"message": error.message, "code": error.code}
+                    {"message": error.message, "code": error.code or ""}
                 )
             else:
-                general_errors.append({"message": error.message, "code": error.code})
+                general_errors.append({"message": error.message, "code": error.code or ""})
 
         result = {"success": False, "errors": formatted_errors}
 

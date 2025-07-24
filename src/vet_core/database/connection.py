@@ -8,7 +8,7 @@ management utilities for PostgreSQL databases.
 import asyncio
 import logging
 import time
-from typing import Optional
+from typing import Any, Dict, Optional
 from urllib.parse import urlparse
 
 from sqlalchemy import text
@@ -128,7 +128,7 @@ def create_engine(
     async_url = config.get_async_url()
 
     # Engine configuration
-    engine_kwargs = {
+    engine_kwargs: Dict[str, Any] = {
         "echo": config.echo,
         "echo_pool": config.echo_pool,
         "future": True,
@@ -359,7 +359,7 @@ def get_database_url(
     username: str = "postgres",
     password: str = "",
     driver: str = "asyncpg",
-    **kwargs,
+    **kwargs: Any,
 ) -> str:
     """
     Construct a PostgreSQL database URL.

@@ -307,7 +307,11 @@ class EnvironmentConfig:
             return default
 
         try:
-            return json.loads(value)
+            result = json.loads(value)
+            if isinstance(result, dict):
+                return result
+            else:
+                raise ConfigError(f"Environment variable '{key}' must be a JSON object")
         except json.JSONDecodeError as e:
             raise ConfigError(
                 f"Environment variable '{key}' contains invalid JSON: {e}"
@@ -420,7 +424,20 @@ class LoggingConfigurator:
             logging_config["filename"] = log_file
             logging_config["filemode"] = "a"
 
-        logging.basicConfig(**logging_config)
+        # Configure logging with proper type handling
+        basic_config_args = {}
+        if 'level' in logging_config:
+            basic_config_args['level'] = logging_config['level']
+        if 'format' in logging_config:
+            basic_config_args['format'] = logging_config['format']
+        if 'datefmt' in logging_config:
+            basic_config_args['datefmt'] = logging_config['datefmt']
+        if 'filename' in logging_config:
+            basic_config_args['filename'] = logging_config['filename']
+        if 'filemode' in logging_config:
+            basic_config_args['filemode'] = logging_config['filemode']
+        
+        logging.basicConfig(**basic_config_args)
 
     @staticmethod
     def configure_structured_logging(

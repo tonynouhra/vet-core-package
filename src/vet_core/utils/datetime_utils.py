@@ -131,7 +131,7 @@ def get_available_appointment_slots(
     business_hours: Dict[DayOfWeek, BusinessHours],
     appointment_duration: timedelta = timedelta(minutes=30),
     buffer_time: timedelta = timedelta(minutes=15),
-    existing_appointments: List[Tuple[datetime, datetime]] = None,
+    existing_appointments: Optional[List[Tuple[datetime, datetime]]] = None,
     timezone: str = "UTC",
 ) -> List[datetime]:
     """

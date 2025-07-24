@@ -53,7 +53,10 @@ class SessionManager:
             default_config.update(session_config)
 
         self.session_factory = async_sessionmaker(
-            bind=engine, class_=AsyncSession, **default_config
+            bind=engine, 
+            class_=AsyncSession,
+            autoflush=default_config.get("autoflush", False),
+            expire_on_commit=default_config.get("expire_on_commit", False)
         )
 
     async def create_session(self) -> AsyncSession:
@@ -63,7 +66,8 @@ class SessionManager:
         Returns:
             New async database session
         """
-        return self.session_factory()
+        session = self.session_factory()
+        return session
 
     @asynccontextmanager
     async def get_session(self) -> AsyncGenerator[AsyncSession, None]:
@@ -111,7 +115,7 @@ class SessionManager:
                     logger.error(f"Transaction error, rolling back: {e}")
                     raise
 
-    async def execute_in_transaction(self, operation, *args, **kwargs):
+    async def execute_in_transaction(self, operation: Any, *args: Any, **kwargs: Any) -> Any:
         """
         Execute an operation within a transaction.
 
@@ -171,7 +175,7 @@ class SessionManager:
         ):
             return {"status": "skipped", "reason": "recently_checked"}
 
-        health_status = {
+        health_status: Dict[str, Any] = {
             "status": "healthy",
             "timestamp": current_time,
             "checks": {},
@@ -206,8 +210,8 @@ class SessionManager:
             if hasattr(pool, "size"):
                 health_status["pool_info"] = {
                     "size": pool.size(),
-                    "checked_in": pool.checkedin(),
-                    "checked_out": pool.checkedout(),
+                    "checked_in": getattr(pool, "checkedin", lambda: 0)(),
+                    "checked_out": getattr(pool, "checkedout", lambda: 0)(),
                     "overflow": getattr(pool, "overflow", lambda: 0)(),
                     "invalid": getattr(pool, "invalid", lambda: 0)(),
                 }
@@ -422,11 +426,11 @@ class SessionManager:
         if hasattr(pool, "size"):
             status.update(
                 {
-                    "size": pool.size(),
-                    "checked_in": pool.checkedin(),
-                    "checked_out": pool.checkedout(),
-                    "overflow": getattr(pool, "overflow", lambda: 0)(),
-                    "invalid": getattr(pool, "invalid", lambda: 0)(),
+                    "size": str(pool.size()),
+                    "checked_in": str(getattr(pool, "checkedin", lambda: 0)()),
+                    "checked_out": str(getattr(pool, "checkedout", lambda: 0)()),
+                    "overflow": str(getattr(pool, "overflow", lambda: 0)()),
+                    "invalid": str(getattr(pool, "invalid", lambda: 0)()),
                 }
             )
 

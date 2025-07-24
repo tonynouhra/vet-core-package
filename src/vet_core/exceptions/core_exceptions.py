@@ -169,7 +169,7 @@ class DatabaseException(VetCoreException):
 
         # Exponential backoff: 1s, 2s, 4s, 8s, etc.
         base_delay = 1.0
-        return base_delay * (2**self.retry_count)
+        return float(base_delay * (2**self.retry_count))
 
     def increment_retry(self) -> "DatabaseException":
         """
@@ -410,7 +410,7 @@ class ValidationException(VetCoreException):
             value: Value that failed validation
             validation_errors: Detailed validation errors
         """
-        details = {}
+        details: Dict[str, Any] = {}
         if field:
             details["field"] = field
         if value is not None:
@@ -453,7 +453,7 @@ class SchemaValidationException(ValidationException):
             validation_errors=validation_errors,
         )
         self.error_code = "SCHEMA_VALIDATION_ERROR"
-        if details:
+        if details and isinstance(self.details, dict):
             self.details.update(details)
 
 
@@ -474,7 +474,7 @@ class BusinessRuleException(ValidationException):
             rule_name: Name of the business rule that failed
             context: Additional context about the failure
         """
-        details = {}
+        details: Dict[str, Any] = {}
         if rule_name:
             details["rule_name"] = rule_name
         if context:
@@ -487,7 +487,7 @@ class BusinessRuleException(ValidationException):
             validation_errors=None,
         )
         self.error_code = "BUSINESS_RULE_ERROR"
-        if details:
+        if details and isinstance(self.details, dict):
             self.details.update(details)
 
 
@@ -591,7 +591,7 @@ def format_validation_errors(errors: List[Dict[str, Any]]) -> Dict[str, List[str
     Returns:
         Dictionary mapping field names to lists of error messages
     """
-    formatted_errors = {}
+    formatted_errors: Dict[str, List[str]] = {}
 
     for error in errors:
         field_path = ".".join(str(loc) for loc in error.get("loc", []))
@@ -634,7 +634,7 @@ def create_error_response(
     Returns:
         Standardized error response dictionary
     """
-    response = {
+    response: Dict[str, Any] = {
         "success": False,
         "error": {
             "type": exception.__class__.__name__,
@@ -667,7 +667,7 @@ def handle_database_retry(
     max_retries: int = 3,
     base_delay: float = 1.0,
     logger: Optional[logging.Logger] = None,
-):
+) -> Any:
     """
     Decorator for handling database operations with retry logic.
 
@@ -681,8 +681,8 @@ def handle_database_retry(
         Decorator function
     """
 
-    def decorator(func):
-        async def wrapper(*args, **kwargs):
+    def decorator(func: Any) -> Any:
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
             if logger is None:
                 operation_logger = logging.getLogger(__name__)
             else:
