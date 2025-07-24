@@ -12,7 +12,6 @@ from typing import Optional
 from urllib.parse import urlparse
 
 from sqlalchemy import text
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlalchemy.pool import AsyncAdaptedQueuePool, NullPool, QueuePool
 

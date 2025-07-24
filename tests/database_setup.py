@@ -12,7 +12,6 @@ from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
 from sqlalchemy import MetaData, text
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 from vet_core.database.connection import create_engine, get_database_url

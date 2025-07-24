@@ -18,12 +18,9 @@ from alembic import command
 from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
-from sqlalchemy import text
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from ..exceptions import DatabaseException, MigrationException
-from ..utils.config import EnvironmentConfig
+from ..exceptions import  MigrationException
 
 logger = logging.getLogger(__name__)
 
