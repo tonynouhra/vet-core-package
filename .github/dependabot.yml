@@ -1,0 +1,77 @@
+version: 2
+updates:
+  # Python dependencies
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "vet-clinic-platform-team"
+    assignees:
+      - "vet-clinic-platform-team"
+    commit-message:
+      prefix: "deps"
+      prefix-development: "deps-dev"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "python"
+    ignore:
+      # Ignore major version updates for stable dependencies
+      - dependency-name: "sqlalchemy"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "pydantic"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "alembic"
+        update-types: ["version-update:semver-major"]
+    groups:
+      # Group related dependencies together
+      database:
+        patterns:
+          - "sqlalchemy*"
+          - "asyncpg"
+          - "alembic"
+          - "psycopg*"
+      validation:
+        patterns:
+          - "pydantic*"
+      testing:
+        patterns:
+          - "pytest*"
+          - "factory-boy"
+          - "faker"
+          - "testcontainers"
+      code-quality:
+        patterns:
+          - "black"
+          - "isort"
+          - "flake8"
+          - "mypy"
+          - "pre-commit"
+      security:
+        patterns:
+          - "bandit*"
+          - "safety"
+          - "pip-audit"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "vet-clinic-platform-team"
+    assignees:
+      - "vet-clinic-platform-team"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "github-actions"

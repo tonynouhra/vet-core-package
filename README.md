@@ -6,6 +6,9 @@ A foundational Python package providing shared data models, database utilities, 
 [![Python versions](https://img.shields.io/pypi/pyversions/vet-core.svg)](https://pypi.org/project/vet-core/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![CI](https://github.com/vetclinic/vet-core/workflows/CI/badge.svg)](https://github.com/vetclinic/vet-core/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/vetclinic/vet-core/branch/main/graph/badge.svg)](https://codecov.io/gh/vetclinic/vet-core)
+[![Security](https://github.com/vetclinic/vet-core/workflows/Code%20Quality/badge.svg)](https://github.com/vetclinic/vet-core/actions/workflows/code-quality.yml)
 
 ## Overview
 
@@ -312,6 +315,43 @@ mypy src/
 
 # Run all quality checks
 pre-commit run --all-files
+```
+
+### CI/CD Pipeline
+
+The project uses GitHub Actions for continuous integration and deployment:
+
+#### Automated Testing
+- **CI Workflow**: Runs on every push and pull request
+  - Tests across Python 3.11 and 3.12
+  - PostgreSQL compatibility testing (versions 13-15)
+  - Code quality checks (linting, formatting, type checking)
+  - Security scanning (Bandit, Safety, pip-audit)
+  - Coverage reporting with Codecov integration
+
+#### Release Management
+- **Automated Releases**: Triggered by version tags
+  - Pre-release testing on TestPyPI
+  - Automated PyPI publishing for stable releases
+  - GitHub release creation with changelog
+  - Cross-platform installation validation
+
+#### Code Quality Monitoring
+- **Daily Quality Checks**: Automated code quality monitoring
+  - Security vulnerability scanning
+  - Dependency health checks
+  - Performance benchmarking
+  - Documentation validation
+
+#### Version Management
+```bash
+# Bump version using GitHub Actions
+# Go to Actions → Version Bump → Run workflow
+# Select version type: patch, minor, major, or prerelease
+
+# Or manually tag a release
+git tag v1.0.0
+git push origin v1.0.0
 ```
 
 ### Building Documentation

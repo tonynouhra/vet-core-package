@@ -1,0 +1,384 @@
+name: Pre-Release Testing
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Pre-release version (e.g., 1.0.0-alpha.1)'
+        required: true
+        type: string
+      test_environments:
+        description: 'Test environments (comma-separated: dev,staging,prod)'
+        required: false
+        default: 'dev,staging'
+        type: string
+
+env:
+  PYTHON_DEFAULT_VERSION: "3.11"
+
+jobs:
+  validate-prerelease:
+    name: Validate Pre-Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      test_envs: ${{ steps.envs.outputs.environments }}
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Validate version format
+      id: version
+      run: |
+        VERSION="${{ github.event.inputs.version }}"
+        if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-(alpha|beta|rc)\.[0-9]+$ ]]; then
+          echo "Invalid pre-release version format: $VERSION"
+          echo "Expected format: X.Y.Z-{alpha|beta|rc}.N"
+          exit 1
+        fi
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Parse test environments
+      id: envs
+      run: |
+        ENVS="${{ github.event.inputs.test_environments }}"
+        # Convert comma-separated string to JSON array
+        JSON_ENVS=$(echo "$ENVS" | jq -R 'split(",") | map(select(length > 0))')
+        echo "environments=$JSON_ENVS" >> $GITHUB_OUTPUT
+
+  comprehensive-testing:
+    name: Comprehensive Testing
+    runs-on: ubuntu-latest
+    needs: [validate-prerelease]
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+        postgres-version: ["13", "14", "15"]
+        test-type: ["unit", "integration", "performance"]
+    
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres-version }}
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: test_vet_core
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+        if [[ "${{ matrix.test-type }}" == "performance" ]]; then
+          pip install pytest-benchmark memory-profiler
+        fi
+
+    - name: Run unit tests
+      if: matrix.test-type == 'unit'
+      run: |
+        pytest tests/ -m "not integration and not slow" -v --cov=vet_core
+
+    - name: Run integration tests
+      if: matrix.test-type == 'integration'
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_vet_core
+      run: |
+        pytest tests/ -m "integration" -v
+
+    - name: Run performance tests
+      if: matrix.test-type == 'performance'
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_vet_core
+      run: |
+        pytest tests/ -k "benchmark" --benchmark-json=benchmark-${{ matrix.python-version }}-pg${{ matrix.postgres-version }}.json || true
+
+    - name: Upload performance results
+      if: matrix.test-type == 'performance'
+      uses: actions/upload-artifact@v3
+      with:
+        name: performance-results
+        path: benchmark-*.json
+
+  build-prerelease:
+    name: Build Pre-Release Package
+    runs-on: ubuntu-latest
+    needs: [validate-prerelease, comprehensive-testing]
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Update version in pyproject.toml
+      run: |
+        VERSION="${{ needs.validate-prerelease.outputs.version }}"
+        sed -i "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_DEFAULT_VERSION }}
+        cache: 'pip'
+
+    - name: Install build dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build twine
+
+    - name: Build package
+      run: |
+        python -m build
+
+    - name: Check package
+      run: |
+        twine check dist/*
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: prerelease-dist
+        path: dist/
+
+  test-installation:
+    name: Test Installation
+    runs-on: ${{ matrix.os }}
+    needs: [build-prerelease]
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.11", "3.12"]
+    
+    steps:
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Download build artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: prerelease-dist
+        path: dist/
+
+    - name: Install package from wheel
+      run: |
+        python -m pip install --upgrade pip
+        pip install dist/*.whl
+
+    - name: Test basic functionality
+      run: |
+        python -c "import vet_core; print(f'vet-core version: {vet_core.__version__}')"
+        python -c "from vet_core.models import User, Pet, Appointment; print('✅ Models imported')"
+        python -c "from vet_core.database import get_engine; print('✅ Database utilities imported')"
+        python -c "from vet_core.schemas import UserCreate; print('✅ Schemas imported')"
+
+  environment-testing:
+    name: Environment Testing
+    runs-on: ubuntu-latest
+    needs: [validate-prerelease, build-prerelease]
+    if: needs.validate-prerelease.outputs.test_envs != '[]'
+    strategy:
+      matrix:
+        environment: ${{ fromJson(needs.validate-prerelease.outputs.test_envs) }}
+    
+    environment: ${{ matrix.environment }}
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_DEFAULT_VERSION }}
+
+    - name: Download build artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: prerelease-dist
+        path: dist/
+
+    - name: Install package
+      run: |
+        python -m pip install --upgrade pip
+        pip install dist/*.whl
+
+    - name: Run environment-specific tests
+      env:
+        ENVIRONMENT: ${{ matrix.environment }}
+      run: |
+        echo "Testing in $ENVIRONMENT environment"
+        python -c "import vet_core; print(f'Package loaded in {vet_core.__version__}')"
+        
+        # Add environment-specific test commands here
+        # For example, test database connections, API endpoints, etc.
+
+  security-scan:
+    name: Security Scan Pre-Release
+    runs-on: ubuntu-latest
+    needs: [build-prerelease]
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_DEFAULT_VERSION }}
+
+    - name: Download build artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: prerelease-dist
+        path: dist/
+
+    - name: Install security tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install bandit[toml] safety semgrep pip-audit
+
+    - name: Install package for scanning
+      run: |
+        pip install dist/*.whl
+
+    - name: Run comprehensive security scan
+      run: |
+        echo "🔍 Running Bandit security scan..."
+        bandit -r $(python -c "import vet_core; print(vet_core.__path__[0])") -f json -o bandit-prerelease.json
+        
+        echo "🔍 Running Safety vulnerability check..."
+        safety check --json --output safety-prerelease.json
+        
+        echo "🔍 Running pip-audit..."
+        pip-audit --format=json --output=pip-audit-prerelease.json
+        
+        echo "🔍 Running Semgrep static analysis..."
+        semgrep --config=auto $(python -c "import vet_core; print(vet_core.__path__[0])") --json --output=semgrep-prerelease.json || true
+
+    - name: Upload security reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: prerelease-security-reports
+        path: |
+          bandit-prerelease.json
+          safety-prerelease.json
+          pip-audit-prerelease.json
+          semgrep-prerelease.json
+
+  publish-testpypi:
+    name: Publish to TestPyPI
+    runs-on: ubuntu-latest
+    needs: [validate-prerelease, comprehensive-testing, test-installation, security-scan]
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/vet-core
+    permissions:
+      id-token: write
+    steps:
+    - name: Download build artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: prerelease-dist
+        path: dist/
+
+    - name: Publish to TestPyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        repository-url: https://test.pypi.org/legacy/
+
+  validate-testpypi:
+    name: Validate TestPyPI Installation
+    runs-on: ubuntu-latest
+    needs: [validate-prerelease, publish-testpypi]
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    
+    steps:
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Wait for package availability
+      run: sleep 120
+
+    - name: Install from TestPyPI
+      run: |
+        python -m pip install --upgrade pip
+        pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ vet-core==${{ needs.validate-prerelease.outputs.version }}
+
+    - name: Validate installation
+      run: |
+        python -c "import vet_core; print(f'✅ vet-core {vet_core.__version__} installed from TestPyPI')"
+        python -c "from vet_core.models import User, Pet, Appointment; print('✅ Models working')"
+        python -c "from vet_core.database import get_engine; print('✅ Database utilities working')"
+
+  create-prerelease:
+    name: Create Pre-Release
+    runs-on: ubuntu-latest
+    needs: [validate-prerelease, validate-testpypi]
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Download build artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: prerelease-dist
+        path: dist/
+
+    - name: Create Pre-Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ needs.validate-prerelease.outputs.version }}
+        release_name: Pre-Release ${{ needs.validate-prerelease.outputs.version }}
+        body: |
+          🚀 **Pre-Release ${{ needs.validate-prerelease.outputs.version }}**
+          
+          This is a pre-release version for testing purposes.
+          
+          **Installation:**
+          ```bash
+          pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ vet-core==${{ needs.validate-prerelease.outputs.version }}
+          ```
+          
+          **Testing Results:**
+          - ✅ Comprehensive testing across Python 3.11-3.12
+          - ✅ PostgreSQL compatibility (versions 13-15)
+          - ✅ Cross-platform installation (Linux, Windows, macOS)
+          - ✅ Security scanning passed
+          - ✅ Available on TestPyPI
+          
+          **Please test this pre-release and report any issues before the final release.**
+        draft: false
+        prerelease: true
+
+  notify-completion:
+    name: Notify Pre-Release Completion
+    runs-on: ubuntu-latest
+    needs: [validate-prerelease, create-prerelease]
+    if: always()
+    steps:
+    - name: Notify completion
+      run: |
+        VERSION="${{ needs.validate-prerelease.outputs.version }}"
+        echo "🎉 Pre-release $VERSION testing completed!"
+        echo "📦 Available on TestPyPI: https://test.pypi.org/project/vet-core/$VERSION/"
+        echo "🔗 GitHub Release: https://github.com/${{ github.repository }}/releases/tag/v$VERSION"
+        echo ""
+        echo "Install command:"
+        echo "pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ vet-core==$VERSION"

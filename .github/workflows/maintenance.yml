@@ -1,0 +1,323 @@
+name: Maintenance
+
+on:
+  schedule:
+    # Run monthly on the 1st at 3 AM UTC
+    - cron: '0 3 1 * *'
+  workflow_dispatch:
+
+env:
+  PYTHON_DEFAULT_VERSION: "3.11"
+
+jobs:
+  cleanup-artifacts:
+    name: Cleanup Old Artifacts
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+    - name: Delete old artifacts
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const artifacts = await github.rest.actions.listArtifactsForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            per_page: 100
+          });
+          
+          const cutoffDate = new Date();
+          cutoffDate.setDate(cutoffDate.getDate() - 30); // Keep artifacts for 30 days
+          
+          for (const artifact of artifacts.data.artifacts) {
+            const createdAt = new Date(artifact.created_at);
+            if (createdAt < cutoffDate) {
+              console.log(`Deleting artifact: ${artifact.name} (${artifact.created_at})`);
+              await github.rest.actions.deleteArtifact({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                artifact_id: artifact.id
+              });
+            }
+          }
+
+  security-audit:
+    name: Monthly Security Audit
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_DEFAULT_VERSION }}
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+
+    - name: Run comprehensive security audit
+      run: |
+        echo "🔍 Running Bandit security scan..."
+        bandit -r src/ -f json -o monthly-bandit-report.json
+        
+        echo "🔍 Running Safety vulnerability check..."
+        safety check --json --output monthly-safety-report.json
+        
+        echo "🔍 Running pip-audit..."
+        pip-audit --format=json --output=monthly-pip-audit-report.json
+
+    - name: Upload security reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: monthly-security-audit-${{ github.run_number }}
+        path: |
+          monthly-bandit-report.json
+          monthly-safety-report.json
+          monthly-pip-audit-report.json
+
+    - name: Create security issue if vulnerabilities found
+      uses: actions/github-script@v6
+      if: failure()
+      with:
+        script: |
+          const title = `🚨 Monthly Security Audit Failed - ${new Date().toISOString().split('T')[0]}`;
+          const body = `
+          ## Monthly Security Audit Results
+          
+          The monthly security audit has detected potential security issues.
+          
+          **Date:** ${new Date().toISOString()}
+          **Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          
+          Please review the security reports in the workflow artifacts and address any vulnerabilities found.
+          
+          ### Next Steps
+          1. Download and review the security reports from the workflow artifacts
+          2. Update vulnerable dependencies
+          3. Fix any security issues in the code
+          4. Re-run the security audit to verify fixes
+          
+          ### Reports Generated
+          - Bandit security scan report
+          - Safety vulnerability check report  
+          - pip-audit dependency audit report
+          `;
+          
+          await github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: title,
+            body: body,
+            labels: ['security', 'maintenance', 'high-priority']
+          });
+
+  dependency-audit:
+    name: Dependency Health Check
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_DEFAULT_VERSION }}
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+        pip install pipdeptree pip-check
+
+    - name: Generate dependency reports
+      run: |
+        echo "📦 Generating dependency tree..."
+        pipdeptree --json > monthly-dependency-tree.json
+        pipdeptree > monthly-dependency-tree.txt
+        
+        echo "📦 Checking for outdated packages..."
+        pip list --outdated --format=json > monthly-outdated-packages.json || true
+        pip list --outdated > monthly-outdated-packages.txt || true
+        
+        echo "📦 Checking for conflicting dependencies..."
+        pip-check > monthly-dependency-conflicts.txt || true
+
+    - name: Upload dependency reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: monthly-dependency-audit-${{ github.run_number }}
+        path: |
+          monthly-dependency-tree.json
+          monthly-dependency-tree.txt
+          monthly-outdated-packages.json
+          monthly-outdated-packages.txt
+          monthly-dependency-conflicts.txt
+
+  performance-baseline:
+    name: Performance Baseline
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: test_vet_core
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_DEFAULT_VERSION }}
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+        pip install pytest-benchmark memory-profiler
+
+    - name: Run performance benchmarks
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_vet_core
+      run: |
+        pytest tests/ -k "benchmark" --benchmark-json=monthly-benchmark-results.json || true
+
+    - name: Upload benchmark results
+      uses: actions/upload-artifact@v3
+      with:
+        name: monthly-performance-baseline-${{ github.run_number }}
+        path: monthly-benchmark-results.json
+
+  code-quality-metrics:
+    name: Code Quality Metrics
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_DEFAULT_VERSION }}
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+        pip install radon xenon
+
+    - name: Generate code quality metrics
+      run: |
+        echo "📊 Calculating cyclomatic complexity..."
+        radon cc src/vet_core --json > monthly-complexity-report.json
+        radon cc src/vet_core > monthly-complexity-report.txt
+        
+        echo "📊 Calculating maintainability index..."
+        radon mi src/vet_core --json > monthly-maintainability-report.json
+        radon mi src/vet_core > monthly-maintainability-report.txt
+        
+        echo "📊 Calculating raw metrics..."
+        radon raw src/vet_core --json > monthly-raw-metrics.json
+        radon raw src/vet_core > monthly-raw-metrics.txt
+        
+        echo "📊 Checking for complex functions..."
+        xenon src/vet_core --max-absolute B --max-modules A --max-average A > monthly-xenon-report.txt || true
+
+    - name: Upload code quality reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: monthly-code-quality-metrics-${{ github.run_number }}
+        path: |
+          monthly-complexity-report.json
+          monthly-complexity-report.txt
+          monthly-maintainability-report.json
+          monthly-maintainability-report.txt
+          monthly-raw-metrics.json
+          monthly-raw-metrics.txt
+          monthly-xenon-report.txt
+
+  create-maintenance-summary:
+    name: Create Maintenance Summary
+    runs-on: ubuntu-latest
+    needs: [cleanup-artifacts, security-audit, dependency-audit, performance-baseline, code-quality-metrics]
+    if: always()
+    steps:
+    - name: Create maintenance summary issue
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const date = new Date().toISOString().split('T')[0];
+          const title = `📋 Monthly Maintenance Summary - ${date}`;
+          
+          const jobResults = {
+            'cleanup-artifacts': '${{ needs.cleanup-artifacts.result }}',
+            'security-audit': '${{ needs.security-audit.result }}',
+            'dependency-audit': '${{ needs.dependency-audit.result }}',
+            'performance-baseline': '${{ needs.performance-baseline.result }}',
+            'code-quality-metrics': '${{ needs.code-quality-metrics.result }}'
+          };
+          
+          let body = `
+          ## Monthly Maintenance Summary
+          
+          **Date:** ${date}
+          **Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          
+          ### Job Results
+          `;
+          
+          for (const [job, result] of Object.entries(jobResults)) {
+            const emoji = result === 'success' ? '✅' : result === 'failure' ? '❌' : '⚠️';
+            body += `- ${emoji} **${job}**: ${result}\n`;
+          }
+          
+          body += `
+          ### Reports Generated
+          - Security audit reports (Bandit, Safety, pip-audit)
+          - Dependency health reports (outdated packages, conflicts)
+          - Performance baseline benchmarks
+          - Code quality metrics (complexity, maintainability)
+          
+          ### Action Items
+          - [ ] Review security audit results
+          - [ ] Update outdated dependencies
+          - [ ] Address any performance regressions
+          - [ ] Review code quality metrics
+          - [ ] Plan improvements for next month
+          
+          All detailed reports are available in the workflow artifacts.
+          `;
+          
+          await github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: title,
+            body: body,
+            labels: ['maintenance', 'monthly-summary']
+          });
+
+  notify-completion:
+    name: Notify Maintenance Completion
+    runs-on: ubuntu-latest
+    needs: [create-maintenance-summary]
+    if: always()
+    steps:
+    - name: Notify completion
+      run: |
+        echo "🎉 Monthly maintenance completed!"
+        echo "📊 Summary issue created with detailed results"
+        echo "📁 All reports available in workflow artifacts"
