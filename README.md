@@ -307,8 +307,6 @@ black src/ tests/
 # Sort imports
 isort src/ tests/
 
-# Lint code
-flake8 src/ tests/
 
 # Type checking
 mypy src/

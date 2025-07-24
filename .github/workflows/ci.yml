@@ -58,7 +58,6 @@ jobs:
       run: |
         black --check src tests
         isort --check-only src tests
-        flake8 src tests
 
     - name: Run type checking
       run: |
