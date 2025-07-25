@@ -108,7 +108,7 @@ class MigrationManager:
             logger.info(f"Creating migration: {message}")
 
             # Prepare command arguments
-            command_args = {
+            command_args : Dict[str, Any]= {
                 "message": message,
                 "autogenerate": autogenerate,
                 "sql": sql,
@@ -124,7 +124,18 @@ class MigrationManager:
                 command_args["rev_id"] = rev_id
 
             # Create the revision
-            script = command.revision(self.alembic_config, **command_args)
+            script_result = command.revision(self.alembic_config, **command_args)
+
+            if isinstance(script_result, list):
+                if script_result:
+                    script = script_result[0]  # Take the first script if multiple
+                else:
+                    raise MigrationException("No migration script was created")
+            else:
+                script = script_result
+
+            if script is None:
+                raise MigrationException("Migration script creation returned None")
 
             revision_id = script.revision
             logger.info(f"Created migration {revision_id}: {message}")
@@ -153,7 +164,7 @@ class MigrationManager:
         try:
             logger.info(f"Upgrading database to revision: {revision}")
 
-            command_args = {
+            command_args : Dict[str, Any] = {
                 "revision": revision,
                 "sql": sql,
             }
@@ -187,7 +198,7 @@ class MigrationManager:
         try:
             logger.info(f"Downgrading database to revision: {revision}")
 
-            command_args = {
+            command_args : Dict[str, Any] = {
                 "revision": revision,
                 "sql": sql,
             }
@@ -217,7 +228,7 @@ class MigrationManager:
         try:
             script_dir = ScriptDirectory.from_config(self.alembic_config)
 
-            def get_revision(connection):
+            def get_revision(connection :Any) -> Optional[str]:
                 context = MigrationContext.configure(connection)
                 return context.get_current_revision()
 
@@ -302,7 +313,7 @@ class MigrationManager:
             MigrationException: If validation fails
         """
         try:
-            result = {
+            result : Dict[str, Any] = {
                 "valid": True,
                 "current_revision": None,
                 "head_revision": None,
@@ -432,7 +443,7 @@ async def run_migrations_async(
         # Create migration manager
         manager = MigrationManager(database_url=database_url)
 
-        result = {
+        result: Dict[str, Any] = {
             "success": False,
             "target_revision": target_revision,
             "initial_revision": None,

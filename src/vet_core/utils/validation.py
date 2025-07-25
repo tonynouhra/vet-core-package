@@ -78,9 +78,6 @@ def sanitize_string(value: str, max_length: Optional[int] = None) -> str:
     Returns:
         Sanitized string
     """
-    if not isinstance(value, str):
-        value = str(value)
-
     # Normalize unicode characters
     normalized = unicodedata.normalize("NFKC", value)
 
@@ -210,10 +207,6 @@ def validate_weight(
         ValidationResult with the weight as Decimal or errors
     """
     result = ValidationResult[Decimal]()
-
-    if weight is None:
-        result.add_error(ValidationError("Weight is required", "weight", "required"))
-        return result
 
     try:
         weight_decimal = Decimal(str(weight))
@@ -408,9 +401,9 @@ def validate_species_breed(
 def validate_required(field_name: str) -> Callable:
     """Decorator to validate that a field is required."""
 
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
-        def wrapper(*args, **kwargs) -> Any:
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             # This is a placeholder for field validation logic
             # In practice, this would be used with Pydantic or similar
             return func(*args, **kwargs)
@@ -423,9 +416,9 @@ def validate_required(field_name: str) -> Callable:
 def validate_length(min_length: int = 0, max_length: Optional[int] = None) -> Callable:
     """Decorator to validate string length."""
 
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
-        def wrapper(value: str, *args, **kwargs) -> Any:
+        def wrapper(value: str, *args: Any, **kwargs: Any) -> Any:
             if len(value) < min_length:
                 raise ValidationError(
                     f"Value must be at least {min_length} characters", code="too_short"
@@ -437,7 +430,6 @@ def validate_length(min_length: int = 0, max_length: Optional[int] = None) -> Ca
             return func(value, *args, **kwargs)
 
         return wrapper
-
     return decorator
 
 
@@ -449,7 +441,7 @@ def validate_range(
 
     def decorator(func: Callable) -> Callable:
         @wraps(func)
-        def wrapper(value: Union[int, float], *args, **kwargs) -> Any:
+        def wrapper(value: Union[int, float], *args: Any, **kwargs: Any) -> Any:
             if min_value is not None and value < min_value:
                 raise ValidationError(
                     f"Value must be at least {min_value}", code="too_low"
