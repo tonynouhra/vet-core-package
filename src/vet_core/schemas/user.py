@@ -295,7 +295,7 @@ class UserUpdate(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_at_least_one_field(self)-> "UserUpdate":
+    def validate_at_least_one_field(self) -> "UserUpdate":
         """Ensure at least one field is provided for update."""
         field_values = [
             self.first_name,

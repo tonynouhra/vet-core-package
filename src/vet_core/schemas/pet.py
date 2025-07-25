@@ -344,7 +344,7 @@ class PetBase(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def validate_species_other_consistency(self)-> "PetBase":
+    def validate_species_other_consistency(self) -> "PetBase":
         """Validate that species 'other' has description."""
         if self.species == PetSpecies.OTHER and not self.species_other_description:
             raise ValueError(
@@ -353,7 +353,7 @@ class PetBase(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_microchip_consistency(self)-> "PetBase":
+    def validate_microchip_consistency(self) -> "PetBase":
         """Validate microchip consistency."""
         if self.is_microchipped and not self.microchip_id:
             raise ValueError(
@@ -362,7 +362,7 @@ class PetBase(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_insurance_consistency(self)-> "PetBase":
+    def validate_insurance_consistency(self) -> "PetBase":
         """Validate insurance consistency."""
         if self.is_insured and not self.insurance_provider:
             raise ValueError(
@@ -371,7 +371,7 @@ class PetBase(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_age_consistency(self)-> "PetBase":
+    def validate_age_consistency(self) -> "PetBase":
         """Validate age information consistency."""
         if self.birth_date and (
             self.approximate_age_years is not None
@@ -539,7 +539,7 @@ class PetUpdate(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_at_least_one_field(self)-> "PetUpdate":
+    def validate_at_least_one_field(self) -> "PetUpdate":
         """Ensure at least one field is provided for update."""
         # Get all field names except the model_config
         field_names = [name for name in self.model_fields.keys()]

@@ -81,7 +81,7 @@ class Appointment(BaseModel):
 
     __tablename__ = "appointments"
 
-    def __init__(self, **kwargs)-> None:
+    def __init__(self, **kwargs) -> None:
         """Initialize Appointment with default values."""
         # Set default values if not provided
         if "status" not in kwargs:

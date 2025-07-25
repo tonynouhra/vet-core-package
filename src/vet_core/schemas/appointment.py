@@ -126,7 +126,7 @@ class AppointmentBase(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_business_hours(self)-> "AppointmentBase":
+    def validate_business_hours(self) -> "AppointmentBase":
         """Validate appointment is during reasonable business hours."""
         # Basic business hours validation (can be customized per clinic)
         hour = self.scheduled_at.hour
@@ -270,7 +270,7 @@ class AppointmentUpdate(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def validate_at_least_one_field(self)-> "AppointmentUpdate":
+    def validate_at_least_one_field(self) -> "AppointmentUpdate":
         """Ensure at least one field is provided for update."""
         field_names = list(self.model_fields.keys())
         field_values = [getattr(self, name) for name in field_names]
@@ -280,7 +280,7 @@ class AppointmentUpdate(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_status_transitions(self)-> "AppointmentUpdate":
+    def validate_status_transitions(self) -> "AppointmentUpdate":
         """Validate status transitions (basic validation)."""
         if self.status == AppointmentStatus.CANCELLED and not self.cancellation_reason:
             raise ValueError("Cancellation reason is required when status is cancelled")
@@ -403,7 +403,7 @@ class AppointmentStatusUpdate(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def validate_cancellation_consistency(self)-> "AppointmentStatusUpdate":
+    def validate_cancellation_consistency(self) -> "AppointmentStatusUpdate":
         """Validate cancellation reason is provided when status is cancelled."""
         if self.status == AppointmentStatus.CANCELLED and not self.cancellation_reason:
             raise ValueError("Cancellation reason is required when status is cancelled")

@@ -75,7 +75,7 @@ class CertificationSchema(BaseModel):
         return v.upper() if v else None
 
     @model_validator(mode="after")
-    def validate_expiry_after_obtained(self)-> "CertificationSchema":
+    def validate_expiry_after_obtained(self) -> "CertificationSchema":
         """Validate expiry date is after obtained date."""
         if self.expiry_date and self.expiry_date <= self.date_obtained:
             raise ValueError("Expiry date must be after the date obtained")
@@ -135,7 +135,7 @@ class AvailabilitySlotSchema(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def validate_time_order(self)-> "AvailabilitySlotSchema":
+    def validate_time_order(self) -> "AvailabilitySlotSchema":
         """Validate end time is after start time."""
 
         def time_to_minutes(time_str: str) -> int:
@@ -175,7 +175,7 @@ class DayAvailabilitySchema(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def validate_availability_consistency(self)-> "DayAvailabilitySchema":
+    def validate_availability_consistency(self) -> "DayAvailabilitySchema":
         """Validate availability consistency."""
         if self.is_available:
             if not self.start_time or not self.end_time:
@@ -436,7 +436,7 @@ class VeterinarianBase(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def validate_license_dates_consistency(self)-> "VeterinarianBase":
+    def validate_license_dates_consistency(self) -> "VeterinarianBase":
         """Validate license date consistency."""
         if self.license_issued_date and self.license_expiry_date:
             if self.license_expiry_date <= self.license_issued_date:
@@ -444,7 +444,7 @@ class VeterinarianBase(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_experience_consistency(self)-> "VeterinarianBase":
+    def validate_experience_consistency(self) -> "VeterinarianBase":
         """Validate years of experience consistency with graduation year."""
         if self.graduation_year and self.years_of_experience:
             current_year = date.today().year
@@ -673,7 +673,7 @@ class VeterinarianUpdate(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_at_least_one_field(self)-> "VeterinarianUpdate":
+    def validate_at_least_one_field(self) -> "VeterinarianUpdate":
         """Ensure at least one field is provided for update."""
         field_names = list(self.model_fields.keys())
         field_values = [getattr(self, name) for name in field_names]
@@ -830,7 +830,7 @@ class VeterinarianLicenseUpdate(BaseModel):
     )(VeterinarianBase.validate_license_dates)
 
     @model_validator(mode="after")
-    def validate_at_least_one_field(self)-> "VeterinarianLicenseUpdate":
+    def validate_at_least_one_field(self) -> "VeterinarianLicenseUpdate":
         """Ensure at least one field is provided for update."""
         field_names = list(self.model_fields.keys())
         field_values = [getattr(self, name) for name in field_names]

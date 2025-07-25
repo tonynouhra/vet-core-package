@@ -72,7 +72,7 @@ class OperatingHoursSchema(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def validate_operating_hours_consistency(self)-> "OperatingHoursSchema":
+    def validate_operating_hours_consistency(self) -> "OperatingHoursSchema":
         """Validate operating hours consistency."""
         if self.is_open:
             if not self.open_time or not self.close_time:
@@ -376,7 +376,7 @@ class ClinicBase(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def validate_coordinates_consistency(self)-> "ClinicBase":
+    def validate_coordinates_consistency(self) -> "ClinicBase":
         """Validate that both latitude and longitude are provided together."""
         if (self.latitude is None) != (self.longitude is None):
             raise ValueError("Both latitude and longitude must be provided together")
@@ -578,7 +578,7 @@ class ClinicUpdate(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_at_least_one_field(self)-> "ClinicUpdate":
+    def validate_at_least_one_field(self) -> "ClinicUpdate":
         """Ensure at least one field is provided for update."""
         field_names = list(self.model_fields.keys())
         field_values = [getattr(self, name) for name in field_names]
@@ -753,7 +753,7 @@ class ClinicSearchFilters(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_location_search(self)-> "ClinicSearchFilters":
+    def validate_location_search(self) -> "ClinicSearchFilters":
         """Validate location search parameters."""
         location_fields = [self.latitude, self.longitude, self.radius_km]
         provided_count = sum(1 for field in location_fields if field is not None)
@@ -834,7 +834,7 @@ class ClinicLocationUpdate(BaseModel):
     _validate_timezone = field_validator("timezone")(ClinicBase.validate_timezone)
 
     @model_validator(mode="after")
-    def validate_coordinates_consistency(self)-> "ClinicLocationUpdate":
+    def validate_coordinates_consistency(self) -> "ClinicLocationUpdate":
         """Validate that both latitude and longitude are provided together."""
         if (self.latitude is None) != (self.longitude is None):
             raise ValueError("Both latitude and longitude must be provided together")

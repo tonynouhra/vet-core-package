@@ -108,7 +108,7 @@ class MigrationManager:
             logger.info(f"Creating migration: {message}")
 
             # Prepare command arguments
-            command_args : Dict[str, Any]= {
+            command_args: Dict[str, Any] = {
                 "message": message,
                 "autogenerate": autogenerate,
                 "sql": sql,
@@ -164,7 +164,7 @@ class MigrationManager:
         try:
             logger.info(f"Upgrading database to revision: {revision}")
 
-            command_args : Dict[str, Any] = {
+            command_args: Dict[str, Any] = {
                 "revision": revision,
                 "sql": sql,
             }
@@ -198,7 +198,7 @@ class MigrationManager:
         try:
             logger.info(f"Downgrading database to revision: {revision}")
 
-            command_args : Dict[str, Any] = {
+            command_args: Dict[str, Any] = {
                 "revision": revision,
                 "sql": sql,
             }
@@ -228,7 +228,7 @@ class MigrationManager:
         try:
             script_dir = ScriptDirectory.from_config(self.alembic_config)
 
-            def get_revision(connection :Any) -> Optional[str]:
+            def get_revision(connection: Any) -> Optional[str]:
                 context = MigrationContext.configure(connection)
                 return context.get_current_revision()
 
@@ -313,7 +313,7 @@ class MigrationManager:
             MigrationException: If validation fails
         """
         try:
-            result : Dict[str, Any] = {
+            result: Dict[str, Any] = {
                 "valid": True,
                 "current_revision": None,
                 "head_revision": None,
