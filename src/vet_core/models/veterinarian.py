@@ -612,7 +612,9 @@ class Veterinarian(BaseModel):
 
         return self.availability.get(day_of_week.lower())
 
-    def update_rating(self, new_rating: Union[Decimal, float, int], review_count_change: int = 1) -> None:
+    def update_rating(
+        self, new_rating: Union[Decimal, float, int], review_count_change: int = 1
+    ) -> None:
         """
         Update the veterinarian's rating with a new review.
 

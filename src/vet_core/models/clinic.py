@@ -388,7 +388,11 @@ class Clinic(BaseModel):
     @property
     def coordinates(self) -> Optional[Tuple[float, float]]:
         """Get the clinic's coordinates as a tuple (latitude, longitude)."""
-        if self.has_coordinates and self.latitude is not None and self.longitude is not None:
+        if (
+            self.has_coordinates
+            and self.latitude is not None
+            and self.longitude is not None
+        ):
             return (self.latitude, self.longitude)
         return None
 
