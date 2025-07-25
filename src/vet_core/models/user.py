@@ -44,7 +44,7 @@ class User(BaseModel):
 
     __tablename__ = "users"
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         """Initialize User with default values."""
         # Set default values if not provided
         if "role" not in kwargs:
@@ -343,7 +343,7 @@ class User(BaseModel):
             self.preferences = {}
         self.preferences[key] = value
 
-    def update_profile(self, **kwargs) -> None:
+    def update_profile(self, **kwargs: Any) -> None:
         """
         Update user profile fields.
 

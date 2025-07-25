@@ -7,7 +7,7 @@ operating hours, and relationships to veterinarians and appointments.
 
 import enum
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy import (
     Boolean,
@@ -56,7 +56,7 @@ class Clinic(BaseModel):
 
     __tablename__ = "clinics"
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         """Initialize Clinic with default values."""
         # Set default values if not provided
         if "status" not in kwargs:
@@ -386,9 +386,9 @@ class Clinic(BaseModel):
         return self.latitude is not None and self.longitude is not None
 
     @property
-    def coordinates(self) -> Optional[tuple[float, float]]:
+    def coordinates(self) -> Optional[Tuple[float, float]]:
         """Get the clinic's coordinates as a tuple (latitude, longitude)."""
-        if self.has_coordinates:
+        if self.has_coordinates and self.latitude is not None and self.longitude is not None:
             return (self.latitude, self.longitude)
         return None
 
@@ -425,7 +425,7 @@ class Clinic(BaseModel):
         if not day_schedule:
             return False
 
-        return day_schedule.get("is_open", False)
+        return bool(day_schedule.get("is_open", False))
 
     def get_hours_for_day(self, day_of_week: str) -> Optional[Dict[str, Any]]:
         """
@@ -693,6 +693,8 @@ class Clinic(BaseModel):
         import math
 
         # Convert latitude and longitude from degrees to radians
+        # We know coordinates exist due to has_coordinates check above
+        assert self.latitude is not None and self.longitude is not None
         lat1, lon1 = math.radians(self.latitude), math.radians(self.longitude)
         lat2, lon2 = math.radians(latitude), math.radians(longitude)
 

@@ -35,12 +35,13 @@ Example:
 
 import uuid
 from datetime import datetime
-from typing import Any, Dict, Optional, TypeVar
+from typing import Any, Dict, Optional, TypeVar, cast
 
 from sqlalchemy import Boolean, DateTime, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.sql import func
+from sqlalchemy.sql.elements import ColumnElement
 
 # Type variable for model classes
 T = TypeVar("T", bound="BaseModel")
@@ -284,7 +285,7 @@ class BaseModel(Base):
             >>> User.get_table_name()
             'users'
         """
-        return cls.__tablename__
+        return cast(str, cls.__tablename__)
 
     @classmethod
     def get_primary_key_column(cls) -> str:
@@ -301,7 +302,7 @@ class BaseModel(Base):
         return "id"
 
     @classmethod
-    def create_query_filter_active(cls):
+    def create_query_filter_active(cls) -> ColumnElement[bool]:
         """
         Create a SQLAlchemy filter expression for active (non-deleted) records.
 
@@ -322,7 +323,7 @@ class BaseModel(Base):
         return cls.is_deleted.is_(False)
 
     @classmethod
-    def create_query_filter_deleted(cls):
+    def create_query_filter_deleted(cls) -> ColumnElement[bool]:
         """
         Create a SQLAlchemy filter expression for soft-deleted records.
 
@@ -342,7 +343,7 @@ class BaseModel(Base):
         """
         return cls.is_deleted.is_(True)
 
-    def update_fields(self, **kwargs) -> None:
+    def update_fields(self, **kwargs: Any) -> None:
         """
         Update multiple fields on the model instance in a single operation.
 

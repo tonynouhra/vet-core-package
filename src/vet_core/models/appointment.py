@@ -9,7 +9,7 @@ import enum
 import uuid
 from datetime import datetime
 from decimal import Decimal
-from typing import Optional
+from typing import Any, Optional
 
 from sqlalchemy import (
     CheckConstraint,
@@ -81,7 +81,7 @@ class Appointment(BaseModel):
 
     __tablename__ = "appointments"
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs: Any) -> None:
         """Initialize Appointment with default values."""
         # Set default values if not provided
         if "status" not in kwargs:

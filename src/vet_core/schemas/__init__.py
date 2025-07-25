@@ -45,7 +45,6 @@ from .user import (
     UserRoleUpdate,
     UserStatusUpdate,
     UserUpdate,
-    VeterinarianCreate,
     VetTechCreate,
 )
 from .veterinarian import (

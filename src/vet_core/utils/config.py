@@ -425,7 +425,7 @@ class LoggingConfigurator:
             logging_config["filemode"] = "a"
 
         # Configure logging with proper type handling
-        basic_config_args = {}
+        basic_config_args: Dict[str, Any] = {}
         if "level" in logging_config:
             basic_config_args["level"] = logging_config["level"]
         if "format" in logging_config:

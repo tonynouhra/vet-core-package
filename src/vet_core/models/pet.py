@@ -86,7 +86,7 @@ class Pet(BaseModel):
 
     __tablename__ = "pets"
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         """Initialize Pet with default values."""
         # Set default values if not provided
         if "status" not in kwargs:

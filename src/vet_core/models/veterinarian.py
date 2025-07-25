@@ -9,7 +9,7 @@ import enum
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from sqlalchemy import (
     Boolean,
@@ -71,7 +71,7 @@ class Veterinarian(BaseModel):
 
     __tablename__ = "veterinarians"
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         """Initialize Veterinarian with default values."""
         # Set default values if not provided
         if "status" not in kwargs:
@@ -595,7 +595,7 @@ class Veterinarian(BaseModel):
         if not day_schedule:
             return False
 
-        return day_schedule.get("is_available", False)
+        return bool(day_schedule.get("is_available", False))
 
     def get_availability_for_day(self, day_of_week: str) -> Optional[Dict[str, Any]]:
         """
@@ -612,7 +612,7 @@ class Veterinarian(BaseModel):
 
         return self.availability.get(day_of_week.lower())
 
-    def update_rating(self, new_rating: Decimal, review_count_change: int = 1) -> None:
+    def update_rating(self, new_rating: Union[Decimal, float, int], review_count_change: int = 1) -> None:
         """
         Update the veterinarian's rating with a new review.
 
