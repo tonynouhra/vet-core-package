@@ -49,7 +49,7 @@ jobs:
         make linkcheck
 
     - name: Upload documentation artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: documentation
         path: docs/_build/html/
@@ -68,7 +68,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
     - name: Download documentation artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: documentation
         path: docs/
@@ -206,7 +206,7 @@ jobs:
         interrogate src/vet_core --output docs/api-coverage.txt
 
     - name: Upload coverage reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: api-docs-coverage
         path: |

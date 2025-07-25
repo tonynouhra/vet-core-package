@@ -75,7 +75,7 @@ jobs:
         semgrep --config=auto src/
 
     - name: Upload security reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: security-reports-${{ github.sha }}
@@ -118,7 +118,7 @@ jobs:
         pip list --outdated
 
     - name: Upload dependency reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: dependency-reports-${{ github.sha }}
@@ -203,7 +203,7 @@ jobs:
         pytest tests/ -k "benchmark" --benchmark-json=benchmark-results.json || true
 
     - name: Upload benchmark results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: benchmark-results-${{ github.sha }}
@@ -287,7 +287,7 @@ jobs:
         coverage report --fail-under=80
 
     - name: Upload coverage reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: coverage-reports-${{ github.sha }}
         path: |

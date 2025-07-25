@@ -70,7 +70,7 @@ jobs:
         pip-audit --format=json --output=monthly-pip-audit-report.json
 
     - name: Upload security reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: monthly-security-audit-${{ github.run_number }}
         path: |
@@ -146,7 +146,7 @@ jobs:
         pip-check > monthly-dependency-conflicts.txt || true
 
     - name: Upload dependency reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: monthly-dependency-audit-${{ github.run_number }}
         path: |
@@ -197,7 +197,7 @@ jobs:
         pytest tests/ -k "benchmark" --benchmark-json=monthly-benchmark-results.json || true
 
     - name: Upload benchmark results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: monthly-performance-baseline-${{ github.run_number }}
         path: monthly-benchmark-results.json
@@ -238,7 +238,7 @@ jobs:
         xenon src/vet_core --max-absolute B --max-modules A --max-average A > monthly-xenon-report.txt || true
 
     - name: Upload code quality reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: monthly-code-quality-metrics-${{ github.run_number }}
         path: |
