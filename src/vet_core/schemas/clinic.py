@@ -53,6 +53,7 @@ class OperatingHoursSchema(BaseModel):
         cls, v: Optional[Dict[str, str]]
     ) -> Optional[Dict[str, str]]:
         """Validate lunch break format."""
+
         if v is None:
             return v
 
