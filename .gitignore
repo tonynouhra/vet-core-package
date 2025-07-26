@@ -193,3 +193,18 @@ coverage.xml
 *.temp
 .tmp/
 .temp/
+
+# Generated reports and summaries
+*_report.md
+*_validation_report.md
+*_test_report.md
+task_*_completion_summary.md
+bandit-report.json
+safety-report.json
+
+# Generated documentation artifacts
+docs/api-coverage.txt
+docs/coverage.svg
+
+# Test simulation files
+test_integration_simulation.py
