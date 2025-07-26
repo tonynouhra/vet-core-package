@@ -472,6 +472,20 @@ def get_session_manager() -> SessionManager:
     return _session_manager
 
 
+def get_engine() -> AsyncEngine:
+    """
+    Get the database engine from the global session manager.
+
+    Returns:
+        SQLAlchemy async engine
+
+    Raises:
+        RuntimeError: If session manager is not initialized
+    """
+    manager = get_session_manager()
+    return manager.engine
+
+
 @asynccontextmanager
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """
