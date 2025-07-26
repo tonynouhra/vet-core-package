@@ -120,7 +120,12 @@ jobs:
     - name: Run security checks
       run: |
         bandit -r src/
-        safety check
+        # Try new safety scan command first, fallback to pip-audit if auth fails
+        if ! safety scan 2>/dev/null; then
+          echo "⚠️  Safety scan requires authentication, using pip-audit as fallback"
+          pip install pip-audit
+          pip-audit
+        fi
 
   build-release:
     name: Build Release Package
