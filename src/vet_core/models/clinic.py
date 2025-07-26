@@ -698,7 +698,8 @@ class Clinic(BaseModel):
 
         # Convert latitude and longitude from degrees to radians
         # We know coordinates exist due to has_coordinates check above
-        assert self.latitude is not None and self.longitude is not None
+        if self.latitude is None or self.longitude is None:
+            raise ValueError("Clinic coordinates are required for distance calculation")
         lat1, lon1 = math.radians(self.latitude), math.radians(self.longitude)
         lat2, lon2 = math.radians(latitude), math.radians(longitude)
 

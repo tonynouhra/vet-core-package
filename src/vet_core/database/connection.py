@@ -357,7 +357,7 @@ def get_database_url(
     port: int = 5432,
     database: str = "postgres",
     username: str = "postgres",
-    password: str = "",
+    password: str = "",  # nosec B107 - Empty string is intentional default for optional password
     driver: str = "asyncpg",
     **kwargs: Any,
 ) -> str:
