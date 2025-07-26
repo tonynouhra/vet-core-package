@@ -23,7 +23,7 @@ class JSONType(TypeDecorator):
 
     def load_dialect_impl(self, dialect):
         """Load the appropriate JSON type based on the database dialect."""
-        if dialect.name == "postgresql":
+        if dialect.name == 'postgresql':
             return dialect.type_descriptor(JSONB())
         else:
             return dialect.type_descriptor(JSON())
