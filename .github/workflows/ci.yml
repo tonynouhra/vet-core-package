@@ -197,4 +197,4 @@ jobs:
       run: |
         python -c "import vet_core; print('Package imported successfully')"
         python -c "from vet_core.models import User, Pet, Appointment; print('Models imported successfully')"
-        python -c "from vet_core.database import get_engine; print('Database utilities imported successfully')"
+        python -c "from vet_core.database import create_engine; print('Database utilities imported successfully')"
