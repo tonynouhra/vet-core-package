@@ -310,7 +310,7 @@ class PreReleaseWorkflowValidator:
                 return False
 
             # Check for GitHub release action
-            if "actions/create-release@v1" not in content:
+            if "actions/create-release@v2" not in content:
                 self.log_error("GitHub create-release action not found")
                 return False
 
