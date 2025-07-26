@@ -18,7 +18,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import JSONB
+from vet_core.database.types import JSONType
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseModel
@@ -152,7 +152,7 @@ class Clinic(BaseModel):
 
     # Operating information
     operating_hours: Mapped[Optional[Dict[str, Any]]] = mapped_column(
-        JSONB, nullable=True, comment="Operating hours by day of week stored as JSON"
+        JSONType, nullable=True, comment="Operating hours by day of week stored as JSON"
     )
 
     timezone: Mapped[Optional[str]] = mapped_column(
@@ -163,11 +163,11 @@ class Clinic(BaseModel):
 
     # Services and capabilities
     services_offered: Mapped[Optional[List[str]]] = mapped_column(
-        JSONB, nullable=True, comment="List of services offered by the clinic"
+        JSONType, nullable=True, comment="List of services offered by the clinic"
     )
 
     specialties: Mapped[Optional[List[str]]] = mapped_column(
-        JSONB, nullable=True, comment="List of medical specialties available"
+        JSONType, nullable=True, comment="List of medical specialties available"
     )
 
     accepts_new_patients: Mapped[bool] = mapped_column(
@@ -200,13 +200,13 @@ class Clinic(BaseModel):
     )
 
     facility_features: Mapped[Optional[List[str]]] = mapped_column(
-        JSONB,
+        JSONType,
         nullable=True,
         comment="List of facility features (parking, wheelchair access, etc.)",
     )
 
     equipment_available: Mapped[Optional[List[str]]] = mapped_column(
-        JSONB, nullable=True, comment="List of medical equipment available"
+        JSONType, nullable=True, comment="List of medical equipment available"
     )
 
     # Capacity and staffing
@@ -224,11 +224,11 @@ class Clinic(BaseModel):
 
     # Insurance and payment
     insurance_accepted: Mapped[Optional[List[str]]] = mapped_column(
-        JSONB, nullable=True, comment="List of accepted insurance providers"
+        JSONType, nullable=True, comment="List of accepted insurance providers"
     )
 
     payment_methods: Mapped[Optional[List[str]]] = mapped_column(
-        JSONB, nullable=True, comment="List of accepted payment methods"
+        JSONType, nullable=True, comment="List of accepted payment methods"
     )
 
     # Emergency information
@@ -246,7 +246,7 @@ class Clinic(BaseModel):
     )
 
     photos: Mapped[Optional[List[str]]] = mapped_column(
-        JSONB, nullable=True, comment="Array of photo URLs for the clinic"
+        JSONType, nullable=True, comment="Array of photo URLs for the clinic"
     )
 
     # Database constraints and indexes
