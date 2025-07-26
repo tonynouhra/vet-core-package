@@ -103,7 +103,7 @@ class VetCoreException(Exception):
         )
 
     def __str__(self) -> str:
-        """String representation of the exception."""
+        """Return string representation of the exception."""
         if self.details:
             return f"{self.message} (Details: {self.details})"
         return self.message
@@ -669,7 +669,7 @@ def handle_database_retry(
     logger: Optional[logging.Logger] = None,
 ) -> Any:
     """
-    Decorator for handling database operations with retry logic.
+    Decorate database operations with retry logic.
 
     Args:
         operation_name: Name of the operation for logging

@@ -355,7 +355,7 @@ class Appointment(BaseModel):
     clinic = relationship("Clinic", back_populates="appointments")
 
     def __repr__(self) -> str:
-        """String representation of the Appointment model."""
+        """Return string representation of the Appointment model."""
         return (
             f"<Appointment(id={self.id}, pet_id={self.pet_id}, "
             f"scheduled_at='{self.scheduled_at}', status='{self.status.value}')>"

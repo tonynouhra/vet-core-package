@@ -23,6 +23,14 @@ class ValidationError(Exception):
     def __init__(
         self, message: str, field: Optional[str] = None, code: Optional[str] = None
     ):
+        """
+        Initialize validation error.
+
+        Args:
+            message: Human-readable error message
+            field: Optional field name that caused the error
+            code: Optional error code for programmatic handling
+        """
         self.message = message
         self.field = field
         self.code = code
@@ -39,6 +47,13 @@ class ValidationResult(Generic[T]):
     def __init__(
         self, value: Optional[T] = None, errors: Optional[List[ValidationError]] = None
     ):
+        """
+        Initialize validation result.
+
+        Args:
+            value: The validated value if validation succeeded
+            errors: List of validation errors if validation failed
+        """
         self.value = value
         self.errors = errors or []
         self.is_valid = len(self.errors) == 0
@@ -399,7 +414,7 @@ def validate_species_breed(
 
 # Validation decorators
 def validate_required(field_name: str) -> Callable:
-    """Decorator to validate that a field is required."""
+    """Validate that a field is required."""
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
@@ -414,7 +429,7 @@ def validate_required(field_name: str) -> Callable:
 
 
 def validate_length(min_length: int = 0, max_length: Optional[int] = None) -> Callable:
-    """Decorator to validate string length."""
+    """Validate string length."""
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
@@ -438,7 +453,7 @@ def validate_range(
     min_value: Optional[Union[int, float]] = None,
     max_value: Optional[Union[int, float]] = None,
 ) -> Callable:
-    """Decorator to validate numeric ranges."""
+    """Validate numeric ranges."""
 
     def decorator(func: Callable) -> Callable:
         @wraps(func)

@@ -391,7 +391,7 @@ class Veterinarian(BaseModel):
     appointments = relationship("Appointment", back_populates="veterinarian")
 
     def __repr__(self) -> str:
-        """String representation of the Veterinarian model."""
+        """Return string representation of the Veterinarian model."""
         return (
             f"<Veterinarian(id={self.id}, user_id={self.user_id}, "
             f"license_number='{self.license_number}', status='{self.status.value}')>"

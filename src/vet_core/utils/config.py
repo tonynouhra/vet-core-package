@@ -605,7 +605,7 @@ def is_feature_enabled(
     user_attributes: Optional[Dict[str, Any]] = None,
 ) -> bool:
     """
-    Convenience function to check if a feature flag is enabled.
+    Check if a feature flag is enabled.
 
     Args:
         flag_name: Name of the feature flag

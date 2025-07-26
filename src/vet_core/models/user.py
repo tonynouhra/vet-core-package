@@ -224,7 +224,7 @@ class User(BaseModel):
     veterinarian = relationship("Veterinarian", back_populates="user", uselist=False)
 
     def __repr__(self) -> str:
-        """String representation of the User model."""
+        """Return string representation of the User model."""
         return f"<User(id={self.id}, email='{self.email}', role='{self.role.value}')>"
 
     @property

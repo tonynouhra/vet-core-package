@@ -1,5 +1,5 @@
 """
-Vet Core Package
+Vet Core Package.
 
 A foundational Python package providing shared data models, database utilities,
 and validation schemas for the veterinary clinic platform.

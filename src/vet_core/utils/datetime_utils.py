@@ -30,6 +30,15 @@ class BusinessHours:
     def __init__(
         self, day: DayOfWeek, open_time: time, close_time: time, is_closed: bool = False
     ):
+        """
+        Initialize business hours for a specific day.
+
+        Args:
+            day: Day of the week
+            open_time: Opening time
+            close_time: Closing time
+            is_closed: Whether the business is closed on this day
+        """
         self.day = day
         self.open_time = open_time
         self.close_time = close_time

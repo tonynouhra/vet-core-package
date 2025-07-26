@@ -372,7 +372,7 @@ class Pet(BaseModel):
     appointments = relationship("Appointment", back_populates="pet")
 
     def __repr__(self) -> str:
-        """String representation of the Pet model."""
+        """Return string representation of the Pet model."""
         return f"<Pet(id={self.id}, name='{self.name}', species='{self.species.value}', owner_id={self.owner_id})>"
 
     @property

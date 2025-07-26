@@ -22,9 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 class SessionManager:
-    """
-    Manages database sessions and provides transaction utilities.
-    """
+    """Manages database sessions and provides transaction utilities."""
 
     def __init__(
         self, engine: AsyncEngine, session_config: Optional[Dict[str, Any]] = None
@@ -319,9 +317,7 @@ class SessionManager:
             return False
 
     async def close_all_sessions(self) -> None:
-        """
-        Close all active sessions and dispose of the engine.
-        """
+        """Close all active sessions and dispose of the engine."""
         try:
             # Dispose of the engine (closes all connections)
             await self.engine.dispose()
@@ -479,7 +475,7 @@ def get_session_manager() -> SessionManager:
 @asynccontextmanager
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """
-    Convenience function to get a database session.
+    Get a database session.
 
     Yields:
         Database session
@@ -495,7 +491,7 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
 @asynccontextmanager
 async def get_transaction() -> AsyncGenerator[AsyncSession, None]:
     """
-    Convenience function to get a database transaction.
+    Get a database transaction.
 
     Yields:
         Database session within a transaction
@@ -515,7 +511,7 @@ async def execute_with_retry(
     exponential_backoff: bool = True,
 ) -> Any:
     """
-    Convenience function to execute database operations with retry logic.
+    Execute database operations with retry logic.
 
     Args:
         operation: Async function that takes a session and returns a result
@@ -538,7 +534,7 @@ async def execute_with_retry(
 
 async def health_check(force: bool = False) -> Dict[str, Any]:
     """
-    Convenience function to perform database health check.
+    Perform database health check.
 
     Args:
         force: Force health check even if recently performed
@@ -555,7 +551,7 @@ async def health_check(force: bool = False) -> Dict[str, Any]:
 
 async def initialize_database(metadata: Optional[MetaData] = None) -> bool:
     """
-    Convenience function to initialize database.
+    Initialize database.
 
     Args:
         metadata: SQLAlchemy metadata object containing table definitions
@@ -574,7 +570,7 @@ async def cleanup_database(
     metadata: Optional[MetaData] = None, drop_all: bool = False
 ) -> bool:
     """
-    Convenience function to clean up database.
+    Clean up database.
 
     Args:
         metadata: SQLAlchemy metadata object containing table definitions
@@ -592,7 +588,7 @@ async def cleanup_database(
 
 async def get_pool_status() -> Dict[str, Any]:
     """
-    Convenience function to get connection pool status.
+    Get connection pool status.
 
     Returns:
         Dictionary with pool status information
