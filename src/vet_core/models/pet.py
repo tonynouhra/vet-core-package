@@ -22,7 +22,7 @@ from sqlalchemy import (
     String,
     Text,
 )
-from sqlalchemy.dialects.postgresql import JSONB
+from vet_core.database.types import JSONType
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseModel
@@ -239,34 +239,34 @@ class Pet(BaseModel):
     )
 
     additional_photos: Mapped[Optional[List[str]]] = mapped_column(
-        JSONB, nullable=True, comment="Array of additional photo URLs"
+        JSONType, nullable=True, comment="Array of additional photo URLs"
     )
 
     # Medical history and vaccination tracking (JSONB fields)
     medical_history: Mapped[Optional[Dict[str, Any]]] = mapped_column(
-        JSONB, nullable=True, comment="Comprehensive medical history stored as JSON"
+        JSONType, nullable=True, comment="Comprehensive medical history stored as JSON"
     )
 
     vaccination_records: Mapped[Optional[List[Dict[str, Any]]]] = mapped_column(
-        JSONB,
+        JSONType,
         nullable=True,
         comment="Vaccination history and records stored as JSON array",
     )
 
     medication_history: Mapped[Optional[List[Dict[str, Any]]]] = mapped_column(
-        JSONB,
+        JSONType,
         nullable=True,
         comment="Current and past medications stored as JSON array",
     )
 
     allergy_information: Mapped[Optional[List[Dict[str, Any]]]] = mapped_column(
-        JSONB,
+        JSONType,
         nullable=True,
         comment="Known allergies and reactions stored as JSON array",
     )
 
     emergency_contact: Mapped[Optional[Dict[str, Any]]] = mapped_column(
-        JSONB, nullable=True, comment="Emergency contact information stored as JSON"
+        JSONType, nullable=True, comment="Emergency contact information stored as JSON"
     )
 
     # Veterinary preferences

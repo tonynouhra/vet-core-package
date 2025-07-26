@@ -9,7 +9,7 @@ import enum
 from typing import Any, Dict, Optional
 
 from sqlalchemy import Boolean, Enum, Index, String, Text, UniqueConstraint
-from sqlalchemy.dialects.postgresql import JSONB
+from vet_core.database.types import JSONType
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseModel
@@ -150,7 +150,7 @@ class User(BaseModel):
 
     # User preferences and settings (JSONB for flexible storage)
     preferences: Mapped[Optional[Dict[str, Any]]] = mapped_column(
-        JSONB, nullable=True, comment="User preferences and settings stored as JSON"
+        JSONType, nullable=True, comment="User preferences and settings stored as JSON"
     )
 
     # Notification settings

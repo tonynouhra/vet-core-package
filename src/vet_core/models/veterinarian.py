@@ -23,7 +23,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import JSONB
+from vet_core.database.types import JSONType
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseModel
@@ -160,7 +160,7 @@ class Veterinarian(BaseModel):
     )
 
     additional_certifications: Mapped[Optional[List[Dict[str, Any]]]] = mapped_column(
-        JSONB,
+        JSONType,
         nullable=True,
         comment="Additional certifications and credentials stored as JSON array",
     )
@@ -192,24 +192,24 @@ class Veterinarian(BaseModel):
 
     # Specializations and expertise
     specializations: Mapped[Optional[List[str]]] = mapped_column(
-        JSONB,
+        JSONType,
         nullable=True,
         comment="List of medical specializations and areas of expertise",
     )
 
     services_provided: Mapped[Optional[List[str]]] = mapped_column(
-        JSONB, nullable=True, comment="List of services this veterinarian provides"
+        JSONType, nullable=True, comment="List of services this veterinarian provides"
     )
 
     species_expertise: Mapped[Optional[List[str]]] = mapped_column(
-        JSONB,
+        JSONType,
         nullable=True,
         comment="List of animal species this veterinarian specializes in",
     )
 
     # Availability and scheduling
     availability: Mapped[Optional[Dict[str, Any]]] = mapped_column(
-        JSONB, nullable=True, comment="Weekly availability schedule stored as JSON"
+        JSONType, nullable=True, comment="Weekly availability schedule stored as JSON"
     )
 
     is_accepting_new_patients: Mapped[bool] = mapped_column(
@@ -251,7 +251,7 @@ class Veterinarian(BaseModel):
     )
 
     languages_spoken: Mapped[Optional[List[str]]] = mapped_column(
-        JSONB, nullable=True, comment="Languages spoken by the veterinarian"
+        JSONType, nullable=True, comment="Languages spoken by the veterinarian"
     )
 
     # Contact and emergency information
@@ -261,7 +261,7 @@ class Veterinarian(BaseModel):
 
     # Professional memberships and affiliations
     professional_memberships: Mapped[Optional[List[Dict[str, Any]]]] = mapped_column(
-        JSONB, nullable=True, comment="Professional organizations and memberships"
+        JSONType, nullable=True, comment="Professional organizations and memberships"
     )
 
     # Database constraints and indexes
