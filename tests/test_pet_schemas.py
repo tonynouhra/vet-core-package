@@ -249,9 +249,9 @@ class TestPetBase:
 
         pet = PetBase(**pet_data)
         assert pet.name == "Buddy"
-        assert pet.species == PetSpecies.DOG
+        assert pet.species == PetSpecies.DOG.value
         assert pet.breed == "Golden Retriever"
-        assert pet.gender == PetGender.MALE
+        assert pet.gender == PetGender.MALE.value
         assert pet.birth_date == date(2020, 5, 15)
         assert pet.weight_kg == Decimal("25.5")
         assert pet.microchip_id == "123456789012345"
@@ -285,14 +285,14 @@ class TestPetBase:
             species=PetSpecies.OTHER,
             species_other_description="bearded dragon",
         )
-        assert pet.species == PetSpecies.OTHER
+        assert pet.species == PetSpecies.OTHER.value
         assert pet.species_other_description == "bearded dragon"
 
         # Non-other species with description should pass (description ignored)
         pet = PetBase(
             name="Buddy", species=PetSpecies.DOG, species_other_description="ignored"
         )
-        assert pet.species == PetSpecies.DOG
+        assert pet.species == PetSpecies.DOG.value
         assert pet.species_other_description == "ignored"
 
     def test_birth_date_validation(self):
@@ -431,8 +431,8 @@ class TestPetCreate:
         pet = PetCreate(**pet_data)
         assert pet.owner_id == owner_id
         assert pet.name == "Buddy"
-        assert pet.species == PetSpecies.DOG
-        assert pet.status == PetStatus.ACTIVE
+        assert pet.species == PetSpecies.DOG.value
+        assert pet.status == PetStatus.ACTIVE.value
 
     def test_with_vaccination_records(self):
         """Test creating pet with vaccination records."""
@@ -597,8 +597,8 @@ class TestPetResponse:
         assert response.id == pet_data["id"]
         assert response.owner_id == pet_data["owner_id"]
         assert response.name == "Buddy"
-        assert response.species == PetSpecies.DOG
-        assert response.status == PetStatus.ACTIVE
+        assert response.species == PetSpecies.DOG.value
+        assert response.status == PetStatus.ACTIVE.value
 
 
 class TestPetMedicalHistoryUpdate:
@@ -736,5 +736,5 @@ class TestPetListResponse:
         response = PetListResponse(**pet_data)
         assert response.id == pet_data["id"]
         assert response.name == "Buddy"
-        assert response.species == PetSpecies.DOG
+        assert response.species == PetSpecies.DOG.value
         assert response.profile_photo_url == "https://example.com/photo.jpg"

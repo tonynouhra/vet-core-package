@@ -16,6 +16,7 @@ author = "Vet Clinic Platform Team"
 # The version info for the project you're documenting
 try:
     from vet_core import __version__
+
     version = __version__
     release = __version__
 except ImportError:
@@ -50,8 +51,8 @@ myst_enable_extensions = [
 
 # File patterns
 source_suffix = {
-    '.rst': None,
-    '.md': None,
+    ".rst": None,
+    ".md": None,
 }
 
 templates_path = ["_templates"]

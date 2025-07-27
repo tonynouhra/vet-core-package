@@ -192,7 +192,17 @@ class UserCreate(UserBase):
     @classmethod
     def validate_role(cls, v: UserRole) -> UserRole:
         """Validate user role."""
-        if v not in UserRole:
+        # Handle string values from Pydantic v2
+        if isinstance(v, str):
+            try:
+                return UserRole(v)
+            except ValueError:
+                raise ValueError(
+                    f"Invalid role. Must be one of: {[role.value for role in UserRole]}"
+                )
+
+        # Handle enum values
+        if not isinstance(v, UserRole):
             raise ValueError(
                 f"Invalid role. Must be one of: {[role.value for role in UserRole]}"
             )
@@ -388,7 +398,17 @@ class UserRoleUpdate(BaseModel):
     @classmethod
     def validate_role(cls, v: UserRole) -> UserRole:
         """Validate user role."""
-        if v not in UserRole:
+        # Handle string values from Pydantic v2
+        if isinstance(v, str):
+            try:
+                return UserRole(v)
+            except ValueError:
+                raise ValueError(
+                    f"Invalid role. Must be one of: {[role.value for role in UserRole]}"
+                )
+
+        # Handle enum values
+        if not isinstance(v, UserRole):
             raise ValueError(
                 f"Invalid role. Must be one of: {[role.value for role in UserRole]}"
             )
@@ -406,7 +426,17 @@ class UserStatusUpdate(BaseModel):
     @classmethod
     def validate_status(cls, v: UserStatus) -> UserStatus:
         """Validate user status."""
-        if v not in UserStatus:
+        # Handle string values from Pydantic v2
+        if isinstance(v, str):
+            try:
+                return UserStatus(v)
+            except ValueError:
+                raise ValueError(
+                    f"Invalid status. Must be one of: {[status.value for status in UserStatus]}"
+                )
+
+        # Handle enum values
+        if not isinstance(v, UserStatus):
             raise ValueError(
                 f"Invalid status. Must be one of: {[status.value for status in UserStatus]}"
             )

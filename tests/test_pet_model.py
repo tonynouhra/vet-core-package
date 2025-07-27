@@ -85,10 +85,12 @@ class TestPetModel:
 
         return pet
 
-    def test_pet_creation_with_all_fields(self, session, sample_user, sample_pet_data):
+    def test_pet_creation_with_all_fields(
+        self, async_session, test_user, sample_pet_data
+    ):
         """Test creating a pet with all fields populated."""
         pet_data = sample_pet_data.copy()
-        pet_data["owner_id"] = sample_user.id
+        pet_data["owner_id"] = test_user.id
         pet_data["mixed_breed"] = False
         pet_data["is_spayed_neutered"] = True
         pet_data["spay_neuter_date"] = date(2021, 3, 10)
@@ -98,8 +100,8 @@ class TestPetModel:
         pet_data["special_needs"] = "Needs daily medication"
 
         pet = Pet(**pet_data)
-        session.add(pet)
-        session.commit()
+        async_async_session.add(pet)
+        async_async_session.commit()
 
         assert pet.name == "Buddy"
         assert pet.species == PetSpecies.DOG
@@ -115,88 +117,88 @@ class TestPetModel:
         assert pet.temperament == "Friendly and energetic"
         assert pet.special_needs == "Needs daily medication"
 
-    def test_pet_age_calculation_with_birth_date(self, session, sample_user):
+    def test_pet_age_calculation_with_birth_date(self, async_session, test_user):
         """Test age calculation when birth date is provided."""
         # Pet born 2 years ago
         birth_date = date.today() - timedelta(days=730)  # Approximately 2 years
         pet = Pet(
-            owner_id=sample_user.id,
+            owner_id=test_user.id,
             name="Buddy",
             species=PetSpecies.DOG,
             birth_date=birth_date,
         )
 
-        session.add(pet)
-        session.commit()
+        async_async_session.add(pet)
+        async_async_session.commit()
 
         age = pet.age_in_years
         assert age == 2 or age == 1  # Account for leap years and exact dates
         assert "year" in pet.age_display
 
-    def test_pet_age_calculation_with_approximate_age(self, session, sample_user):
+    def test_pet_age_calculation_with_approximate_age(self, async_session, test_user):
         """Test age calculation when approximate age is provided."""
         pet = Pet(
-            owner_id=sample_user.id,
+            owner_id=test_user.id,
             name="Buddy",
             species=PetSpecies.DOG,
             approximate_age_years=3,
             approximate_age_months=6,
         )
 
-        session.add(pet)
-        session.commit()
+        async_async_session.add(pet)
+        async_async_session.commit()
 
         assert pet.age_in_years == 3
         assert "3 year" in pet.age_display
         assert "6 month" in pet.age_display
 
-    def test_pet_young_age_display(self, session, sample_user):
+    def test_pet_young_age_display(self, async_session, test_user):
         """Test age display for very young pets (less than 1 year)."""
         # Pet born 6 months ago
         birth_date = date.today() - timedelta(days=180)
         pet = Pet(
-            owner_id=sample_user.id,
+            owner_id=test_user.id,
             name="Puppy",
             species=PetSpecies.DOG,
             birth_date=birth_date,
         )
 
-        session.add(pet)
-        session.commit()
+        async_async_session.add(pet)
+        async_async_session.commit()
 
         age_display = pet.age_display
         assert "month" in age_display
         assert "year" not in age_display or "0 year" in age_display
 
-    def test_pet_weight_display(self, session, sample_user):
+    def test_pet_weight_display(self, async_session, test_user):
         """Test weight display formatting."""
         pet = Pet(
-            owner_id=sample_user.id,
+            owner_id=test_user.id,
             name="Buddy",
             species=PetSpecies.DOG,
             weight_kg=Decimal("20.8"),  # ~45.75 lbs
         )
 
-        session.add(pet)
-        session.commit()
+        async_session.add(pet)
+        async_session.commit()
 
         assert pet.weight_display == "20.8 kg"
 
         # Test pet without weight
         pet_no_weight = Pet(
-            owner_id=sample_user.id, name="Unknown Weight", species=PetSpecies.CAT
+            owner_id=test_user.id, name="Unknown Weight", species=PetSpecies.CAT
         )
 
-        session.add(pet_no_weight)
-        session.commit()
+        async_session.add(pet_no_weight)
+        async_session.commit()
 
         assert pet_no_weight.weight_display == "Unknown"
 
-    def test_pet_breed_display(self, session, sample_user):
+    def test_pet_breed_display(self, async_session, test_user):
         """Test breed display formatting."""
         # Regular breed
         pet1 = Pet(
-            owner_id=sample_user.id,
+            owner_id=test_user.id,
             name="Buddy",
             species=PetSpecies.DOG,
             breed="Golden Retriever",
@@ -206,7 +208,7 @@ class TestPetModel:
 
         # Mixed breed with known primary breed
         pet2 = Pet(
-            owner_id=sample_user.id,
+            owner_id=test_user.id,
             name="Max",
             species=PetSpecies.DOG,
             breed="Labrador",
@@ -216,7 +218,7 @@ class TestPetModel:
 
         # Mixed breed without specific breed
         pet3 = Pet(
-            owner_id=sample_user.id,
+            owner_id=test_user.id,
             name="Rex",
             species=PetSpecies.DOG,
             mixed_breed=True,
@@ -224,15 +226,15 @@ class TestPetModel:
         assert pet3.breed_display == "Mixed Breed"
 
         # Unknown breed
-        pet4 = Pet(owner_id=sample_user.id, name="Mystery", species=PetSpecies.CAT)
+        pet4 = Pet(owner_id=test_user.id, name="Mystery", species=PetSpecies.CAT)
         assert pet4.breed_display == "Unknown"
 
-    def test_pet_vaccination_tracking(self, session, sample_user):
+    def test_pet_vaccination_tracking(self, async_session, test_user):
         """Test vaccination record management."""
-        pet = Pet(owner_id=sample_user.id, name="Buddy", species=PetSpecies.DOG)
+        pet = Pet(owner_id=test_user.id, name="Buddy", species=PetSpecies.DOG)
 
-        session.add(pet)
-        session.commit()
+        async_session.add(pet)
+        async_session.commit()
 
         # Add vaccination record
         vaccination_date = date(2023, 1, 15)
@@ -245,7 +247,7 @@ class TestPetModel:
             notes="No adverse reactions",
         )
 
-        session.commit()
+        async_session.commit()
 
         # Check vaccination was added
         assert pet.vaccination_records is not None
@@ -266,12 +268,12 @@ class TestPetModel:
         # Test vaccination due check
         assert not pet.is_due_for_vaccination("Rabies")  # Recently vaccinated
 
-    def test_pet_medical_history_tracking(self, session, sample_user):
+    def test_pet_medical_history_tracking(self, async_session, test_user):
         """Test medical record management."""
-        pet = Pet(owner_id=sample_user.id, name="Buddy", species=PetSpecies.DOG)
+        pet = Pet(owner_id=test_user.id, name="Buddy", species=PetSpecies.DOG)
 
-        session.add(pet)
-        session.commit()
+        async_session.add(pet)
+        async_session.commit()
 
         # Add medical record
         record_date = date(2023, 6, 10)
@@ -285,7 +287,7 @@ class TestPetModel:
             follow_up_needed=False,
         )
 
-        session.commit()
+        async_session.commit()
 
         # Check medical record was added
         assert pet.medical_history is not None
@@ -306,12 +308,12 @@ class TestPetModel:
         assert len(checkup_records) == 1
         assert checkup_records[0]["type"] == "checkup"
 
-    def test_pet_allergy_management(self, session, sample_user):
+    def test_pet_allergy_management(self, async_session, test_user):
         """Test allergy information management."""
-        pet = Pet(owner_id=sample_user.id, name="Buddy", species=PetSpecies.DOG)
+        pet = Pet(owner_id=test_user.id, name="Buddy", species=PetSpecies.DOG)
 
-        session.add(pet)
-        session.commit()
+        async_session.add(pet)
+        async_session.commit()
 
         # Add allergy
         discovery_date = date(2023, 3, 20)
@@ -322,7 +324,7 @@ class TestPetModel:
             date_discovered=discovery_date,
         )
 
-        session.commit()
+        async_session.commit()
 
         # Check allergy was added
         assert pet.allergy_information is not None
@@ -334,24 +336,24 @@ class TestPetModel:
         assert allergy["severity"] == "moderate"
         assert allergy["date_discovered"] == discovery_date.isoformat()
 
-    def test_pet_weight_update_with_history(self, session, sample_user):
+    def test_pet_weight_update_with_history(self, async_session, test_user):
         """Test weight updates with history tracking."""
         pet = Pet(
-            owner_id=sample_user.id,
+            owner_id=test_user.id,
             name="Buddy",
             species=PetSpecies.DOG,
             weight_kg=Decimal("22.7"),  # ~50 lbs
             medical_history={},
         )
 
-        session.add(pet)
-        session.commit()
+        async_session.add(pet)
+        async_session.commit()
 
         # Update weight
         new_weight = Decimal("25.2")  # ~55.5 lbs
         pet.update_weight(new_weight, recorded_by="Dr. Smith")
 
-        session.commit()
+        async_session.commit()
 
         # Check weight was updated
         assert pet.weight_kg == new_weight
@@ -367,7 +369,7 @@ class TestPetModel:
         # Check size category was updated (for dogs)
         assert pet.size_category == PetSize.MEDIUM  # 25.2 kg should be medium
 
-    def test_pet_size_category_assignment(self, session, sample_user):
+    def test_pet_size_category_assignment(self, async_session, test_user):
         """Test automatic size category assignment based on weight."""
         test_cases = [
             (Decimal("1.4"), PetSize.EXTRA_SMALL),  # ~3 lbs
@@ -379,7 +381,7 @@ class TestPetModel:
 
         for weight, expected_size in test_cases:
             pet = Pet(
-                owner_id=sample_user.id, name=f"Dog_{weight}", species=PetSpecies.DOG
+                owner_id=test_user.id, name=f"Dog_{weight}", species=PetSpecies.DOG
             )
             pet.update_weight(weight)
 
@@ -387,18 +389,18 @@ class TestPetModel:
                 pet.size_category == expected_size
             ), f"Weight {weight} kg should be {expected_size}"
 
-    def test_pet_deceased_marking(self, session, sample_user):
+    def test_pet_deceased_marking(self, async_session, test_user):
         """Test marking a pet as deceased."""
-        pet = Pet(owner_id=sample_user.id, name="Buddy", species=PetSpecies.DOG)
+        pet = Pet(owner_id=test_user.id, name="Buddy", species=PetSpecies.DOG)
 
-        session.add(pet)
-        session.commit()
+        async_session.add(pet)
+        async_session.commit()
 
         # Mark as deceased
         death_date = date(2023, 12, 1)
         pet.mark_deceased(date_of_death=death_date, cause="Old age")
 
-        session.commit()
+        async_session.commit()
 
         # Check status was updated
         assert pet.status == PetStatus.DECEASED
@@ -410,7 +412,7 @@ class TestPetModel:
         assert deceased_info["date_of_death"] == death_date.isoformat()
         assert deceased_info["cause"] == "Old age"
 
-    def test_pet_ownership_transfer(self, session, sample_user):
+    def test_pet_ownership_transfer(self, async_session, test_user):
         """Test transferring pet ownership."""
         # Create second user
         new_owner = User(
@@ -420,21 +422,21 @@ class TestPetModel:
             last_name="Smith",
             role=UserRole.PET_OWNER,
         )
-        session.add(new_owner)
-        session.commit()
+        async_session.add(new_owner)
+        async_session.commit()
 
         # Create pet
-        pet = Pet(owner_id=sample_user.id, name="Buddy", species=PetSpecies.DOG)
+        pet = Pet(owner_id=test_user.id, name="Buddy", species=PetSpecies.DOG)
 
-        session.add(pet)
-        session.commit()
+        async_session.add(pet)
+        async_session.commit()
 
         original_owner_id = pet.owner_id
 
         # Transfer ownership
         pet.transfer_ownership(new_owner.id, transfer_reason="Moving abroad")
 
-        session.commit()
+        async_session.commit()
 
         # Check ownership was transferred
         assert pet.owner_id == new_owner.id
@@ -448,17 +450,17 @@ class TestPetModel:
         assert transfer_record["new_owner_id"] == str(new_owner.id)
         assert transfer_record["reason"] == "Moving abroad"
 
-    def test_pet_active_status_check(self, session, sample_user):
+    def test_pet_active_status_check(self, async_session, test_user):
         """Test active status checking."""
         pet = Pet(
-            owner_id=sample_user.id,
+            owner_id=test_user.id,
             name="Buddy",
             species=PetSpecies.DOG,
             status=PetStatus.ACTIVE,
         )
 
-        session.add(pet)
-        session.commit()
+        async_session.add(pet)
+        async_session.commit()
 
         # Pet should be active
         assert pet.is_active
@@ -472,61 +474,61 @@ class TestPetModel:
         pet.soft_delete()
         assert not pet.is_active
 
-    def test_pet_string_representation(self, session, sample_user):
+    def test_pet_string_representation(self, async_session, test_user):
         """Test string representation of Pet model."""
-        pet = Pet(owner_id=sample_user.id, name="Buddy", species=PetSpecies.DOG)
+        pet = Pet(owner_id=test_user.id, name="Buddy", species=PetSpecies.DOG)
 
-        session.add(pet)
-        session.commit()
+        async_session.add(pet)
+        async_session.commit()
 
         repr_str = repr(pet)
         assert "Pet(" in repr_str
         assert f"id={pet.id}" in repr_str
         assert "name='Buddy'" in repr_str
         assert "species='dog'" in repr_str
-        assert f"owner_id={sample_user.id}" in repr_str
+        assert f"owner_id={test_user.id}" in repr_str
 
-    def test_pet_display_name(self, session, sample_user):
+    def test_pet_display_name(self, async_session, test_user):
         """Test display name property."""
-        pet = Pet(owner_id=sample_user.id, name="Buddy", species=PetSpecies.DOG)
+        pet = Pet(owner_id=test_user.id, name="Buddy", species=PetSpecies.DOG)
 
         assert pet.display_name == "Buddy"
 
-    def test_pet_microchip_uniqueness(self, session, sample_user):
+    def test_pet_microchip_uniqueness(self, async_session, test_user):
         """Test that microchip IDs are unique."""
         microchip_id = "123456789012345"
 
         # Create first pet with microchip
         pet1 = Pet(
-            owner_id=sample_user.id,
+            owner_id=test_user.id,
             name="Buddy",
             species=PetSpecies.DOG,
             microchip_id=microchip_id,
         )
 
-        session.add(pet1)
-        session.commit()
+        async_session.add(pet1)
+        async_session.commit()
 
         # Try to create second pet with same microchip ID
         pet2 = Pet(
-            owner_id=sample_user.id,
+            owner_id=test_user.id,
             name="Max",
             species=PetSpecies.CAT,
             microchip_id=microchip_id,
         )
 
-        session.add(pet2)
+        async_session.add(pet2)
 
         # This should raise an integrity error due to unique constraint
         with pytest.raises(Exception):  # SQLAlchemy will raise an IntegrityError
-            session.commit()
+            async_session.commit()
 
-    def test_pet_jsonb_fields_initialization(self, session, sample_user):
+    def test_pet_jsonb_fields_initialization(self, async_session, test_user):
         """Test that JSONB fields are properly initialized."""
-        pet = Pet(owner_id=sample_user.id, name="Buddy", species=PetSpecies.DOG)
+        pet = Pet(owner_id=test_user.id, name="Buddy", species=PetSpecies.DOG)
 
-        session.add(pet)
-        session.commit()
+        async_session.add(pet)
+        async_session.commit()
 
         # JSONB fields should be None initially
         assert pet.medical_history is None

@@ -73,13 +73,22 @@ class TestSessionManager:
     @pytest.mark.asyncio
     async def test_get_transaction_context_manager(self):
         """Test get_transaction context manager."""
+        from unittest.mock import AsyncMock
+        from contextlib import asynccontextmanager
+
         mock_engine = Mock()
         manager = SessionManager(mock_engine)
         mock_session = AsyncMock()
 
+        # Create a proper async context manager for session.begin()
+        @asynccontextmanager
+        async def mock_begin():
+            yield None
+
+        mock_session.begin = mock_begin
+
         with patch.object(manager, "get_session") as mock_get_session:
             mock_get_session.return_value.__aenter__.return_value = mock_session
-            mock_session.begin.return_value.__aenter__.return_value = None
 
             async with manager.get_transaction() as session:
                 assert session == mock_session
@@ -142,13 +151,19 @@ class TestSessionManager:
         manager = SessionManager(mock_engine)
         mock_session = AsyncMock()
 
-        with patch.object(manager, "get_session") as mock_get_session:
+        with (
+            patch.object(manager, "get_session") as mock_get_session,
+            patch.object(manager, "get_transaction") as mock_get_transaction,
+        ):
             mock_get_session.return_value.__aenter__.return_value = mock_session
+            mock_get_transaction.return_value.__aenter__.return_value = mock_session
 
             result = await manager.health_check()
 
-            assert result is True
-            mock_session.execute.assert_called_once()
+            assert isinstance(result, dict)
+            assert result["status"] == "healthy"
+            assert "checks" in result
+            assert "timestamp" in result
 
     @pytest.mark.asyncio
     async def test_health_check_failure(self):
@@ -161,7 +176,11 @@ class TestSessionManager:
 
             result = await manager.health_check()
 
-            assert result is False
+            assert isinstance(result, dict)
+            assert result["status"] == "unhealthy"
+            assert "checks" in result
+            assert "general" in result["checks"]
+            assert result["checks"]["general"]["status"] == "fail"
 
 
 class TestGlobalSessionManager:

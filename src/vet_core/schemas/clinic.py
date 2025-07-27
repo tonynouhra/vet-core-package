@@ -701,7 +701,17 @@ class ClinicStatusUpdate(BaseModel):
     @classmethod
     def validate_status(cls, v: ClinicStatus) -> ClinicStatus:
         """Validate clinic status."""
-        if v not in ClinicStatus:
+        # Handle string values from Pydantic v2
+        if isinstance(v, str):
+            try:
+                return ClinicStatus(v)
+            except ValueError:
+                raise ValueError(
+                    f"Invalid status. Must be one of: {[status.value for status in ClinicStatus]}"
+                )
+
+        # Handle enum values
+        if not isinstance(v, ClinicStatus):
             raise ValueError(
                 f"Invalid status. Must be one of: {[status.value for status in ClinicStatus]}"
             )

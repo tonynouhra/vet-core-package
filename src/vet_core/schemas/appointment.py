@@ -165,6 +165,15 @@ class AppointmentCreate(AppointmentBase):
     @classmethod
     def validate_initial_status(cls, v: AppointmentStatus) -> AppointmentStatus:
         """Validate initial appointment status."""
+        # Handle string values from Pydantic v2
+        if isinstance(v, str):
+            try:
+                v = AppointmentStatus(v)
+            except ValueError:
+                raise ValueError(
+                    f"Invalid status. Must be one of: {[status.value for status in AppointmentStatus]}"
+                )
+
         # Only allow certain statuses for new appointments
         allowed_initial_statuses = {
             AppointmentStatus.SCHEDULED,
@@ -370,7 +379,17 @@ class AppointmentStatusUpdate(BaseModel):
     @classmethod
     def validate_status(cls, v: AppointmentStatus) -> AppointmentStatus:
         """Validate appointment status."""
-        if v not in AppointmentStatus:
+        # Handle string values from Pydantic v2
+        if isinstance(v, str):
+            try:
+                return AppointmentStatus(v)
+            except ValueError:
+                raise ValueError(
+                    f"Invalid status. Must be one of: {[status.value for status in AppointmentStatus]}"
+                )
+
+        # Handle enum values
+        if not isinstance(v, AppointmentStatus):
             raise ValueError(
                 f"Invalid status. Must be one of: {[status.value for status in AppointmentStatus]}"
             )

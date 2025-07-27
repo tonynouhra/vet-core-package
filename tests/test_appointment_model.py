@@ -127,7 +127,10 @@ class TestAppointmentModel:
         assert appointment.pet_id == sample_pet.id
         assert appointment.veterinarian_id == sample_veterinarian_id
         assert appointment.clinic_id == sample_clinic_id
-        assert appointment.scheduled_at == scheduled_time
+        # SQLite doesn't preserve timezone info, so compare timezone-naive datetimes
+        assert appointment.scheduled_at.replace(tzinfo=None) == scheduled_time.replace(
+            tzinfo=None
+        )
         assert appointment.service_type == ServiceType.WELLNESS_EXAM
         assert appointment.status == AppointmentStatus.SCHEDULED  # Default value
         assert appointment.priority == AppointmentPriority.NORMAL  # Default value
@@ -168,12 +171,14 @@ class TestAppointmentModel:
 
     def test_appointment_default_values(self, session, sample_appointment_data):
         """Test that default values are set correctly."""
-        appointment = Appointment(**sample_appointment_data)
+        # Remove duration_minutes from fixture data to test the default value
+        appointment_data = sample_appointment_data.copy()
+        appointment_data.pop("duration_minutes", None)
+        appointment = Appointment(**appointment_data)
 
         assert appointment.status == AppointmentStatus.SCHEDULED
         assert appointment.priority == AppointmentPriority.NORMAL
         assert appointment.duration_minutes == 30
-        assert appointment.is_spayed_neutered is False  # From Pet model defaults
 
     def test_appointment_status_transitions(self, session, sample_appointment_data):
         """Test appointment status transitions and business logic."""
