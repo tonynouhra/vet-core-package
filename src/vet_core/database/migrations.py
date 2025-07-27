@@ -8,7 +8,7 @@ running migrations, and validating migration states.
 import asyncio
 import logging
 import os
-import subprocess  # nosec B404 - Required for Alembic migration management
+import subprocess  # nosec B404
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -234,7 +234,7 @@ class MigrationManager:
 
             # This is a simplified approach - in practice you'd need to connect to the database
             # For now, we'll use the command line approach
-            result = subprocess.run(  # nosec B603 - Controlled input for Alembic migration management
+            result = subprocess.run(  # nosec B603
                 [
                     sys.executable,
                     "-m",
