@@ -437,7 +437,7 @@ class PerformanceMonitor:
         """
         try:
             # Get initial I/O counters (not available on all platforms)
-            initial_io = self.process.io_counters()  # type: ignore[attr-defined]
+            initial_io = self.process.io_counters()
         except (AttributeError, psutil.AccessDenied):
             logger.warning("I/O counters not available on this platform")
             return {"read": 0.0, "write": 0.0}
@@ -449,7 +449,7 @@ class PerformanceMonitor:
 
         try:
             # Get final I/O counters
-            final_io = self.process.io_counters()  # type: ignore[attr-defined]
+            final_io = self.process.io_counters()
         except (AttributeError, psutil.AccessDenied):
             logger.warning("I/O counters not available on this platform")
             return {"read": 0.0, "write": 0.0}
