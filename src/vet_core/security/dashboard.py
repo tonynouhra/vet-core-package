@@ -24,7 +24,7 @@ from .assessor import RiskAssessor
 from .audit_trail import AuditEvent, AuditEventType, SecurityAuditTrail
 from .compliance import ComplianceFramework, SecurityComplianceManager
 from .metrics_analyzer import SecurityMetricsAnalyzer
-from .models import SecurityReport, VulnerabilitySeverity, Vulnerability
+from .models import SecurityReport, Vulnerability, VulnerabilitySeverity
 from .reporter import SecurityReporter
 from .scanner import VulnerabilityScanner
 from .status_tracker import VulnerabilityStatus, VulnerabilityStatusTracker

@@ -16,7 +16,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, List, Optional, Union
 
-
 # Security logger
 security_logger = logging.getLogger("vet_core.security.subprocess")
 
