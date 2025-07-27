@@ -13,7 +13,11 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from .models import SecurityReport, Vulnerability, VulnerabilitySeverity
-from .subprocess_utils import SubprocessSecurityError, get_executable_path, secure_subprocess_run
+from .subprocess_utils import (
+    SubprocessSecurityError,
+    get_executable_path,
+    secure_subprocess_run,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -321,14 +325,16 @@ class VulnerabilityScanner:
         try:
             # nosec B603: Using secure subprocess wrapper with validation
             result = secure_subprocess_run(
-                ["pip-audit", "--version"], 
+                ["pip-audit", "--version"],
                 validate_first_arg=True,  # Validate pip-audit executable path
-                timeout=10
+                timeout=10,
             )
             if result.returncode == 0:
                 return result.stdout.strip()
         except SubprocessSecurityError as e:
-            self.logger.warning(f"Security validation failed for pip-audit version check: {e}")
+            self.logger.warning(
+                f"Security validation failed for pip-audit version check: {e}"
+            )
         except Exception as e:
             self.logger.warning(f"Could not determine pip-audit version: {e}")
 

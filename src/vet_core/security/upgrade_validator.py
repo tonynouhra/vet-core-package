@@ -247,7 +247,7 @@ class UpgradeValidator:
             # Validate inputs for security
             validated_package_name = validate_package_name(package_name)
             validated_target_version = validate_version(target_version)
-            
+
             # Use pip-compile or similar to check for conflicts
             # For now, we'll use a simpler approach with pip check
 
@@ -274,8 +274,8 @@ class UpgradeValidator:
             # Check current dependency tree
             # nosec B603: Using secure subprocess wrapper with validation
             result = secure_subprocess_run(
-                [sys.executable, "-m", "pip", "check"], 
-                validate_first_arg=False  # sys.executable is trusted
+                [sys.executable, "-m", "pip", "check"],
+                validate_first_arg=False,  # sys.executable is trusted
             )
 
             if result.returncode != 0:
@@ -311,7 +311,7 @@ class UpgradeValidator:
         try:
             # Validate test command for security
             validated_test_command = validate_test_command(self.test_command)
-            
+
             # Change to project root for test execution
             original_cwd = os.getcwd()
             os.chdir(self.project_root)
@@ -328,9 +328,9 @@ class UpgradeValidator:
 
             # nosec B603: Using secure subprocess wrapper with validation
             result = secure_subprocess_run(
-                cmd, 
+                cmd,
                 validate_first_arg=False,  # sys.executable is trusted
-                timeout=300  # 5 minute timeout
+                timeout=300,  # 5 minute timeout
             )
 
             test_results.update(
@@ -403,7 +403,7 @@ class UpgradeValidator:
             # Validate inputs for security
             validated_package_name = validate_package_name(package_name)
             validated_target_version = validate_version(target_version)
-            
+
             # Get current version
             # nosec B603: Using secure subprocess wrapper with validation
             result = secure_subprocess_run(
@@ -462,9 +462,9 @@ class UpgradeValidator:
 
             except Exception as e:
                 error_message = f"Failed to install package: {str(e)}"
-                if hasattr(e, 'stderr') and e.stderr:
+                if hasattr(e, "stderr") and e.stderr:
                     error_message = f"Failed to install package: {e.stderr}"
-                
+
                 return UpgradeResult.failure_result(
                     package_name=package_name,
                     from_version=current_version,

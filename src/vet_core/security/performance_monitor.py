@@ -162,7 +162,7 @@ class PerformanceMonitor:
             try:
                 # Validate module name for security
                 validated_module = validate_module_name(module)
-                
+
                 # Use secure subprocess to get clean import timing
                 # nosec B603: Using secure subprocess wrapper with validation
                 result = secure_subprocess_run(
@@ -177,9 +177,7 @@ class PerformanceMonitor:
                     total_time += import_time
                     logger.debug(f"Import time for {module}: {import_time:.4f}s")
                 else:
-                    logger.warning(
-                        f"Failed to import {module}: {result.stderr}"
-                    )
+                    logger.warning(f"Failed to import {module}: {result.stderr}")
 
             except SubprocessSecurityError as e:
                 logger.error(f"Security validation failed for module {module}: {e}")
@@ -208,7 +206,7 @@ class PerformanceMonitor:
         try:
             # Validate test command for security
             validated_test_command = validate_test_command(test_command)
-            
+
             # Change to project root
             original_cwd = os.getcwd()
             os.chdir(self.project_root)
@@ -231,7 +229,9 @@ class PerformanceMonitor:
             return execution_time
 
         except SubprocessSecurityError as e:
-            logger.error(f"Security validation failed for test command {test_command}: {e}")
+            logger.error(
+                f"Security validation failed for test command {test_command}: {e}"
+            )
             return 0.0
         except Exception as e:
             if "timeout" in str(e).lower():
@@ -298,7 +298,7 @@ class PerformanceMonitor:
         try:
             # Validate package name for security
             validated_package_name = validate_package_name(package_name)
-            
+
             # nosec B603: Using secure subprocess wrapper with validation
             result = secure_subprocess_run(
                 [sys.executable, "-m", "pip", "show", validated_package_name],
@@ -309,7 +309,9 @@ class PerformanceMonitor:
                 for line in result.stdout.split("\n"):
                     if line.startswith("Location:"):
                         location = line.split(":", 1)[1].strip()
-                        package_path = Path(location) / validated_package_name.replace("-", "_")
+                        package_path = Path(location) / validated_package_name.replace(
+                            "-", "_"
+                        )
 
                         if package_path.exists():
                             size_bytes = sum(
@@ -344,19 +346,21 @@ class PerformanceMonitor:
         try:
             # Validate startup command for security
             if not startup_command or not isinstance(startup_command, list):
-                raise SubprocessSecurityError("Startup command must be a non-empty list")
-            
+                raise SubprocessSecurityError(
+                    "Startup command must be a non-empty list"
+                )
+
             # Log the command being executed for security auditing
             logger.info(f"Executing startup command: {' '.join(startup_command)}")
-            
+
             # nosec B603: Using secure subprocess wrapper with validation
             # Note: This accepts arbitrary commands by design for performance testing
             # but logs the command for security auditing
             result = secure_subprocess_run(
-                startup_command, 
+                startup_command,
                 validate_first_arg=True,  # Validate executable path
-                timeout=30, 
-                cwd=self.project_root
+                timeout=30,
+                cwd=self.project_root,
             )
 
             end_time = time.time()
