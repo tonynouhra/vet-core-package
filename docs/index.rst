@@ -1,9 +1,8 @@
 Welcome to vet-core's documentation!
 ==========================================
 
-**vet-core** is a comprehensive veterinary clinic management package that provides
-models, schemas, and database utilities for building veterinary applications.
-
+vet-core** - A comprehensive veterinary clinic management package
+with models, schemas, and database utilities.
 .. note::
    **API Documentation Coverage: 97.2%** ✅
 
