@@ -208,3 +208,4 @@ docs/coverage.svg
 
 # Test simulation files
 test_integration_simulation.py
+/bandit-report-after-fixes.json

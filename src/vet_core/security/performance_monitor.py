@@ -8,7 +8,6 @@ during dependency upgrades to detect regressions.
 import json
 import logging
 import os
-import subprocess
 import sys
 import time
 from dataclasses import dataclass, field
@@ -17,6 +16,14 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 import psutil
+
+from .subprocess_utils import (
+    SubprocessSecurityError,
+    secure_subprocess_run,
+    validate_module_name,
+    validate_package_name,
+    validate_test_command,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -153,10 +160,14 @@ class PerformanceMonitor:
         for module in modules:
             start_time = time.time()
             try:
-                # Use subprocess to get clean import timing
-                result = subprocess.run(
-                    [sys.executable, "-c", f"import {module}"],
-                    capture_output=True,
+                # Validate module name for security
+                validated_module = validate_module_name(module)
+                
+                # Use secure subprocess to get clean import timing
+                # nosec B603: Using secure subprocess wrapper with validation
+                result = secure_subprocess_run(
+                    [sys.executable, "-c", f"import {validated_module}"],
+                    validate_first_arg=False,  # sys.executable is trusted
                     timeout=30,
                 )
 
@@ -167,14 +178,18 @@ class PerformanceMonitor:
                     logger.debug(f"Import time for {module}: {import_time:.4f}s")
                 else:
                     logger.warning(
-                        f"Failed to import {module}: {result.stderr.decode()}"
+                        f"Failed to import {module}: {result.stderr}"
                     )
 
-            except subprocess.TimeoutExpired:
-                logger.error(f"Import timeout for {module}")
-                total_time += 30.0  # Penalty for timeout
+            except SubprocessSecurityError as e:
+                logger.error(f"Security validation failed for module {module}: {e}")
+                continue
             except Exception as e:
-                logger.error(f"Error measuring import time for {module}: {e}")
+                if "timeout" in str(e).lower():
+                    logger.error(f"Import timeout for {module}")
+                    total_time += 30.0  # Penalty for timeout
+                else:
+                    logger.error(f"Error measuring import time for {module}: {e}")
 
         return total_time
 
@@ -191,13 +206,17 @@ class PerformanceMonitor:
         start_time = time.time()
 
         try:
+            # Validate test command for security
+            validated_test_command = validate_test_command(test_command)
+            
             # Change to project root
             original_cwd = os.getcwd()
             os.chdir(self.project_root)
 
-            result = subprocess.run(
-                [sys.executable, "-m", test_command, "--tb=no", "-q"],
-                capture_output=True,
+            # nosec B603: Using secure subprocess wrapper with validation
+            result = secure_subprocess_run(
+                [sys.executable, "-m", validated_test_command, "--tb=no", "-q"],
+                validate_first_arg=False,  # sys.executable is trusted
                 timeout=600,
             )  # 10 minute timeout
 
@@ -211,12 +230,16 @@ class PerformanceMonitor:
 
             return execution_time
 
-        except subprocess.TimeoutExpired:
-            logger.error("Test execution timed out")
-            return 600.0  # Return timeout value
-        except Exception as e:
-            logger.error(f"Error measuring test execution time: {e}")
+        except SubprocessSecurityError as e:
+            logger.error(f"Security validation failed for test command {test_command}: {e}")
             return 0.0
+        except Exception as e:
+            if "timeout" in str(e).lower():
+                logger.error("Test execution timed out")
+                return 600.0  # Return timeout value
+            else:
+                logger.error(f"Error measuring test execution time: {e}")
+                return 0.0
         finally:
             os.chdir(original_cwd)
 
@@ -273,17 +296,20 @@ class PerformanceMonitor:
             Package size in MB
         """
         try:
-            result = subprocess.run(
-                [sys.executable, "-m", "pip", "show", package_name],
-                capture_output=True,
-                text=True,
+            # Validate package name for security
+            validated_package_name = validate_package_name(package_name)
+            
+            # nosec B603: Using secure subprocess wrapper with validation
+            result = secure_subprocess_run(
+                [sys.executable, "-m", "pip", "show", validated_package_name],
+                validate_first_arg=False,  # sys.executable is trusted
             )
 
             if result.returncode == 0:
                 for line in result.stdout.split("\n"):
                     if line.startswith("Location:"):
                         location = line.split(":", 1)[1].strip()
-                        package_path = Path(location) / package_name.replace("-", "_")
+                        package_path = Path(location) / validated_package_name.replace("-", "_")
 
                         if package_path.exists():
                             size_bytes = sum(
@@ -296,6 +322,9 @@ class PerformanceMonitor:
             logger.warning(f"Could not determine size for package {package_name}")
             return 0.0
 
+        except SubprocessSecurityError as e:
+            logger.error(f"Security validation failed for package {package_name}: {e}")
+            return 0.0
         except Exception as e:
             logger.error(f"Error measuring package size for {package_name}: {e}")
             return 0.0
@@ -313,8 +342,21 @@ class PerformanceMonitor:
         start_time = time.time()
 
         try:
-            result = subprocess.run(
-                startup_command, capture_output=True, timeout=30, cwd=self.project_root
+            # Validate startup command for security
+            if not startup_command or not isinstance(startup_command, list):
+                raise SubprocessSecurityError("Startup command must be a non-empty list")
+            
+            # Log the command being executed for security auditing
+            logger.info(f"Executing startup command: {' '.join(startup_command)}")
+            
+            # nosec B603: Using secure subprocess wrapper with validation
+            # Note: This accepts arbitrary commands by design for performance testing
+            # but logs the command for security auditing
+            result = secure_subprocess_run(
+                startup_command, 
+                validate_first_arg=True,  # Validate executable path
+                timeout=30, 
+                cwd=self.project_root
             )
 
             end_time = time.time()
@@ -327,12 +369,16 @@ class PerformanceMonitor:
 
             return startup_time
 
-        except subprocess.TimeoutExpired:
-            logger.error("Startup timed out")
-            return 30.0
-        except Exception as e:
-            logger.error(f"Error measuring startup time: {e}")
+        except SubprocessSecurityError as e:
+            logger.error(f"Security validation failed for startup command: {e}")
             return 0.0
+        except Exception as e:
+            if "timeout" in str(e).lower():
+                logger.error("Startup timed out")
+                return 30.0
+            else:
+                logger.error(f"Error measuring startup time: {e}")
+                return 0.0
 
     def measure_cpu_usage(
         self, operation: Callable[[], Any], duration: float = 10.0

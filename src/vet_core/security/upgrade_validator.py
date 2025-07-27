@@ -9,7 +9,6 @@ import json
 import logging
 import os
 import shutil
-import subprocess
 import sys
 import tempfile
 import venv
@@ -19,6 +18,13 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from .models import RemediationAction, Vulnerability, VulnerabilitySeverity
+from .subprocess_utils import (
+    SubprocessSecurityError,
+    secure_subprocess_run,
+    validate_package_name,
+    validate_test_command,
+    validate_version,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -162,15 +168,15 @@ class UpgradeValidator:
         # Create requirements file from current environment
         requirements_file = backup_path / "requirements.txt"
         try:
-            result = subprocess.run(
+            # nosec B603: Using secure subprocess wrapper with validation
+            result = secure_subprocess_run(
                 [sys.executable, "-m", "pip", "freeze"],
-                capture_output=True,
-                text=True,
+                validate_first_arg=False,  # sys.executable is trusted
                 check=True,
             )
 
             requirements_file.write_text(result.stdout)
-        except subprocess.CalledProcessError as e:
+        except Exception as e:
             raise RuntimeError(f"Failed to create requirements backup: {e}")
 
         # Backup pyproject.toml if it exists
@@ -201,7 +207,8 @@ class UpgradeValidator:
                 shutil.copy2(backup.pyproject_backup, self.pyproject_path)
 
             # Reinstall packages from requirements
-            subprocess.run(
+            # nosec B603: Using secure subprocess wrapper with validation
+            secure_subprocess_run(
                 [
                     sys.executable,
                     "-m",
@@ -210,18 +217,15 @@ class UpgradeValidator:
                     "-r",
                     str(backup.requirements_file),
                 ],
+                validate_first_arg=False,  # sys.executable is trusted
                 check=True,
-                capture_output=True,
             )
 
             logger.info("Environment successfully restored from backup")
             return True
 
-        except subprocess.CalledProcessError as e:
-            logger.error(f"Failed to restore environment: {e}")
-            return False
         except Exception as e:
-            logger.error(f"Unexpected error during environment restoration: {e}")
+            logger.error(f"Failed to restore environment: {e}")
             return False
 
     def check_dependency_conflicts(
@@ -240,11 +244,16 @@ class UpgradeValidator:
         conflicts = []
 
         try:
+            # Validate inputs for security
+            validated_package_name = validate_package_name(package_name)
+            validated_target_version = validate_version(target_version)
+            
             # Use pip-compile or similar to check for conflicts
             # For now, we'll use a simpler approach with pip check
 
             # First, try to resolve dependencies without installing
-            result = subprocess.run(
+            # nosec B603: Using secure subprocess wrapper with validation
+            result = secure_subprocess_run(
                 [
                     sys.executable,
                     "-m",
@@ -252,10 +261,9 @@ class UpgradeValidator:
                     "install",
                     "--dry-run",
                     "--no-deps",
-                    f"{package_name}=={target_version}",
+                    f"{validated_package_name}=={validated_target_version}",
                 ],
-                capture_output=True,
-                text=True,
+                validate_first_arg=False,  # sys.executable is trusted
             )
 
             if result.returncode != 0:
@@ -264,8 +272,10 @@ class UpgradeValidator:
                 )
 
             # Check current dependency tree
-            result = subprocess.run(
-                [sys.executable, "-m", "pip", "check"], capture_output=True, text=True
+            # nosec B603: Using secure subprocess wrapper with validation
+            result = secure_subprocess_run(
+                [sys.executable, "-m", "pip", "check"], 
+                validate_first_arg=False  # sys.executable is trusted
             )
 
             if result.returncode != 0:
@@ -299,6 +309,9 @@ class UpgradeValidator:
         start_time = datetime.now()
 
         try:
+            # Validate test command for security
+            validated_test_command = validate_test_command(self.test_command)
+            
             # Change to project root for test execution
             original_cwd = os.getcwd()
             os.chdir(self.project_root)
@@ -307,14 +320,17 @@ class UpgradeValidator:
             cmd = [
                 sys.executable,
                 "-m",
-                self.test_command,
+                validated_test_command,
                 "--tb=short",  # Short traceback format
                 "-v",  # Verbose output
                 "--durations=10",  # Show 10 slowest tests
             ]
 
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=300  # 5 minute timeout
+            # nosec B603: Using secure subprocess wrapper with validation
+            result = secure_subprocess_run(
+                cmd, 
+                validate_first_arg=False,  # sys.executable is trusted
+                timeout=300  # 5 minute timeout
             )
 
             test_results.update(
@@ -328,12 +344,12 @@ class UpgradeValidator:
             )
 
             # Parse test output for counts (pytest specific)
-            if "pytest" in self.test_command:
+            if "pytest" in validated_test_command:
                 self._parse_pytest_output(result.stdout, test_results)
 
-        except subprocess.TimeoutExpired:
-            test_results["stderr"] = "Test execution timed out after 5 minutes"
-            test_results["duration"] = 300.0
+        except SubprocessSecurityError as e:
+            test_results["stderr"] = f"Security validation failed for test command: {e}"
+            test_results["duration"] = 0.0
         except Exception as e:
             test_results["stderr"] = f"Error running tests: {e}"
         finally:
@@ -384,11 +400,15 @@ class UpgradeValidator:
         rollback_performed = False
 
         try:
+            # Validate inputs for security
+            validated_package_name = validate_package_name(package_name)
+            validated_target_version = validate_version(target_version)
+            
             # Get current version
-            result = subprocess.run(
-                [sys.executable, "-m", "pip", "show", package_name],
-                capture_output=True,
-                text=True,
+            # nosec B603: Using secure subprocess wrapper with validation
+            result = secure_subprocess_run(
+                [sys.executable, "-m", "pip", "show", validated_package_name],
+                validate_first_arg=False,  # sys.executable is trusted
             )
 
             current_version = "unknown"
@@ -425,27 +445,31 @@ class UpgradeValidator:
 
             # Perform the upgrade
             try:
-                subprocess.run(
+                # nosec B603: Using secure subprocess wrapper with validation
+                secure_subprocess_run(
                     [
                         sys.executable,
                         "-m",
                         "pip",
                         "install",
-                        f"{package_name}=={target_version}",
+                        f"{validated_package_name}=={validated_target_version}",
                     ],
+                    validate_first_arg=False,  # sys.executable is trusted
                     check=True,
-                    capture_output=True,
-                    text=True,
                 )
 
                 logger.info(f"Successfully installed {package_name}=={target_version}")
 
-            except subprocess.CalledProcessError as e:
+            except Exception as e:
+                error_message = f"Failed to install package: {str(e)}"
+                if hasattr(e, 'stderr') and e.stderr:
+                    error_message = f"Failed to install package: {e.stderr}"
+                
                 return UpgradeResult.failure_result(
                     package_name=package_name,
                     from_version=current_version,
                     to_version=target_version,
-                    error_message=f"Failed to install package: {e.stderr}",
+                    error_message=error_message,
                     validation_duration=(datetime.now() - start_time).total_seconds(),
                 )
 
