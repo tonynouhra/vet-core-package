@@ -21,7 +21,11 @@ from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 
 from vet_core.security.scanner import VulnerabilityScanner
-from vet_core.security.models import SecurityReport, Vulnerability, VulnerabilitySeverity
+from vet_core.security.models import (
+    SecurityReport,
+    Vulnerability,
+    VulnerabilitySeverity,
+)
 
 
 class TestGitHubActionsIntegration:
@@ -90,8 +94,10 @@ class TestGitHubActionsIntegration:
 
     def test_workflow_file_structure(self):
         """Test GitHub Actions workflow file structure and content."""
-        workflow_path = Path("vet-core-package/.github/workflows/security-monitoring.yml")
-        
+        workflow_path = Path(
+            "vet-core-package/.github/workflows/security-monitoring.yml"
+        )
+
         if not workflow_path.exists():
             pytest.skip("GitHub Actions workflow file not found")
 
@@ -101,22 +107,22 @@ class TestGitHubActionsIntegration:
         # Test basic workflow structure
         assert "name" in workflow
         assert workflow["name"] == "Security Monitoring"
-        
+
         assert "on" in workflow
         on_config = workflow["on"]
-        
+
         # Test scheduling configuration
         assert "schedule" in on_config
         assert isinstance(on_config["schedule"], list)
         assert len(on_config["schedule"]) > 0
-        
+
         # Verify daily scheduling (6 AM UTC)
         schedule_cron = on_config["schedule"][0]["cron"]
         assert "0 6 * * *" == schedule_cron
 
         # Test manual trigger
         assert "workflow_dispatch" in on_config
-        
+
         # Test push triggers
         assert "push" in on_config
         push_config = on_config["push"]
@@ -127,20 +133,20 @@ class TestGitHubActionsIntegration:
         # Test jobs configuration
         assert "jobs" in workflow
         jobs = workflow["jobs"]
-        
+
         # Test vulnerability scan job
         assert "vulnerability-scan" in jobs
         scan_job = jobs["vulnerability-scan"]
-        
+
         assert "runs-on" in scan_job
         assert scan_job["runs-on"] == "ubuntu-latest"
-        
+
         assert "steps" in scan_job
         steps = scan_job["steps"]
-        
+
         # Verify essential steps
         step_names = [step.get("name", "") for step in steps]
-        
+
         assert any("checkout" in name.lower() for name in step_names)
         assert any("python" in name.lower() for name in step_names)
         assert any("pip-audit" in name.lower() for name in step_names)
@@ -152,7 +158,7 @@ class TestGitHubActionsIntegration:
         """Test security scanning step simulation."""
         with patch.dict(os.environ, github_env):
             scanner = VulnerabilityScanner()
-            
+
             # Mock pip-audit execution
             with patch("subprocess.run") as mock_run:
                 mock_result = Mock()
@@ -173,7 +179,7 @@ class TestGitHubActionsIntegration:
                     assert report.critical_count == 0  # Based on mock data
                     assert report.high_count == 0
                     assert report.medium_count >= 0
-                    
+
                     # Simulate file output (in real workflow, pip-audit creates this)
                     output_file.write_text(json.dumps(sample_pip_audit_output))
                     assert output_file.exists()
@@ -198,7 +204,7 @@ class TestGitHubActionsIntegration:
             report = scanner.scan_from_file(raw_file)
 
             # Generate processed reports (simulate GitHub Actions processing)
-            
+
             # 1. Generate security summary markdown
             summary_file = mock_security_reports_dir / "security-summary.md"
             summary_content = self._generate_security_summary_markdown(report)
@@ -222,7 +228,7 @@ class TestGitHubActionsIntegration:
 
             # Verify content
             assert "Security Vulnerability Report" in summary_file.read_text()
-            
+
             json_data = json.loads(json_report_file.read_text())
             assert "scan_metadata" in json_data
             assert "vulnerabilities" in json_data
@@ -263,7 +269,7 @@ class TestGitHubActionsIntegration:
         with patch.dict(os.environ, github_env):
             # Simulate complete artifact generation workflow
             scanner = VulnerabilityScanner()
-            
+
             # Mock pip-audit
             with patch("subprocess.run") as mock_run:
                 mock_result = Mock()
@@ -294,7 +300,9 @@ class TestGitHubActionsIntegration:
                     for filename in expected_files:
                         file_path = mock_security_reports_dir / filename
                         assert file_path.exists(), f"Missing artifact: {filename}"
-                        assert file_path.stat().st_size > 0, f"Empty artifact: {filename}"
+                        assert (
+                            file_path.stat().st_size > 0
+                        ), f"Empty artifact: {filename}"
 
                     # Verify artifact metadata
                     metadata_file = mock_security_reports_dir / "artifact-metadata.json"
@@ -313,15 +321,16 @@ class TestGitHubActionsIntegration:
                     # Validate metadata
                     assert metadata_file.exists()
                     metadata_content = json.loads(metadata_file.read_text())
-                    assert metadata_content["total_vulnerabilities"] == report.vulnerability_count
+                    assert (
+                        metadata_content["total_vulnerabilities"]
+                        == report.vulnerability_count
+                    )
 
-    def test_notification_trigger_conditions(
-        self, github_env, sample_pip_audit_output
-    ):
+    def test_notification_trigger_conditions(self, github_env, sample_pip_audit_output):
         """Test notification trigger conditions in GitHub Actions."""
         with patch.dict(os.environ, github_env):
             scanner = VulnerabilityScanner()
-            
+
             # Mock pip-audit with critical vulnerabilities
             critical_output = {
                 "dependencies": [
@@ -354,12 +363,14 @@ class TestGitHubActionsIntegration:
 
                     # Simulate notification trigger logic
                     should_notify_critical = report.critical_count > 0
-                    should_notify_high = report.high_count > 0 or report.critical_count > 0
+                    should_notify_high = (
+                        report.high_count > 0 or report.critical_count > 0
+                    )
                     should_create_issue = report.critical_count > 0
 
                     # Test notification conditions
                     notification_level = self._determine_notification_level(report)
-                    
+
                     # Verify notification triggers
                     if report.critical_count > 0:
                         assert notification_level == "critical"
@@ -371,8 +382,10 @@ class TestGitHubActionsIntegration:
 
     def test_workflow_step_dependencies(self):
         """Test workflow step dependencies and execution order."""
-        workflow_path = Path("vet-core-package/.github/workflows/security-monitoring.yml")
-        
+        workflow_path = Path(
+            "vet-core-package/.github/workflows/security-monitoring.yml"
+        )
+
         if not workflow_path.exists():
             pytest.skip("GitHub Actions workflow file not found")
 
@@ -384,36 +397,32 @@ class TestGitHubActionsIntegration:
 
         # Verify step order
         step_names = [step.get("name", "") for step in steps]
-        
+
         # Checkout should be first
         assert any("checkout" in step_names[0].lower() for _ in [None])
-        
+
         # Python setup should come early
         python_step_index = next(
-            i for i, name in enumerate(step_names) 
-            if "python" in name.lower()
+            i for i, name in enumerate(step_names) if "python" in name.lower()
         )
         assert python_step_index < len(step_names) / 2
 
         # Dependencies installation should come before scanning
         install_step_index = next(
-            (i for i, name in enumerate(step_names) if "install" in name.lower()),
-            -1
+            (i for i, name in enumerate(step_names) if "install" in name.lower()), -1
         )
         scan_step_index = next(
-            (i for i, name in enumerate(step_names) if "pip-audit" in name.lower()),
-            -1
+            (i for i, name in enumerate(step_names) if "pip-audit" in name.lower()), -1
         )
-        
+
         if install_step_index >= 0 and scan_step_index >= 0:
             assert install_step_index < scan_step_index
 
         # Upload should be near the end
         upload_step_index = next(
-            (i for i, name in enumerate(step_names) if "upload" in name.lower()),
-            -1
+            (i for i, name in enumerate(step_names) if "upload" in name.lower()), -1
         )
-        
+
         if upload_step_index >= 0:
             assert upload_step_index > len(step_names) / 2
 
@@ -431,15 +440,18 @@ class TestGitHubActionsIntegration:
             for case in test_cases:
                 with patch.dict(os.environ, {"GITHUB_EVENT_NAME": case["event"]}):
                     event_name = os.getenv("GITHUB_EVENT_NAME")
-                    
+
                     # Simulate conditional logic
                     should_run_trend_analysis = event_name == "schedule"
                     should_post_pr_comment = event_name == "pull_request"
-                    should_create_issue = event_name in ["schedule", "workflow_dispatch"]
+                    should_create_issue = event_name in [
+                        "schedule",
+                        "workflow_dispatch",
+                    ]
 
                     # Verify conditions
                     assert should_run_trend_analysis == case["should_run_trend"]
-                    
+
                     if case["event"] == "pull_request":
                         assert should_post_pr_comment
                     else:
@@ -485,7 +497,9 @@ class TestGitHubActionsIntegration:
                 "scanner_version": report.scanner_version,
                 "scan_duration": report.scan_duration,
                 "total_packages_scanned": report.total_packages_scanned,
-                "scan_command": getattr(report, "scan_command", "pip-audit --format=json"),
+                "scan_command": getattr(
+                    report, "scan_command", "pip-audit --format=json"
+                ),
             },
             "summary": {
                 "total_vulnerabilities": report.vulnerability_count,
@@ -505,7 +519,9 @@ class TestGitHubActionsIntegration:
                     "severity": v.severity.value,
                     "cvss_score": v.cvss_score,
                     "description": v.description,
-                    "published_date": v.published_date.isoformat() if v.published_date else None,
+                    "published_date": (
+                        v.published_date.isoformat() if v.published_date else None
+                    ),
                     "discovered_date": v.discovered_date.isoformat(),
                     "is_fixable": v.is_fixable,
                 }
@@ -518,17 +534,21 @@ class TestGitHubActionsIntegration:
         lines = [
             "ID,Package,Installed Version,Fix Versions,Severity,CVSS Score,Description,Fixable"
         ]
-        
+
         for v in report.vulnerabilities:
             fix_versions = ";".join(v.fix_versions) if v.fix_versions else ""
-            description = v.description.replace(",", ";").replace("\n", " ") if v.description else ""
-            
+            description = (
+                v.description.replace(",", ";").replace("\n", " ")
+                if v.description
+                else ""
+            )
+
             lines.append(
                 f"{v.id},{v.package_name},{v.installed_version},"
                 f'"{fix_versions}",{v.severity.value},{v.cvss_score or ""},'
                 f'"{description}",{v.is_fixable}'
             )
-        
+
         return "\n".join(lines)
 
     def _create_security_artifacts(

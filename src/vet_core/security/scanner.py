@@ -329,9 +329,7 @@ class VulnerabilityScanner:
         return "unknown"
 
     def _count_scanned_packages(self, scan_data: Dict[str, Any]) -> int:
-        """
-        Count the total number of packages that were scanned.
-        """
+        """Count the total number of packages that were scanned."""
         # New format has dependencies list
         if "dependencies" in scan_data:
             return len(scan_data["dependencies"])

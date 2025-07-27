@@ -54,6 +54,7 @@ class NotificationConfig:
     include_remediation_recommendations: bool = True
 
     def __post_init__(self):
+        """Initialize default values after dataclass creation."""
         if self.email_to is None:
             self.email_to = []
 
