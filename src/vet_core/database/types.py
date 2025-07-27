@@ -5,8 +5,12 @@ This module provides column types that work across different database backends,
 particularly for handling JSON data in both PostgreSQL and SQLite.
 """
 
+from typing import Any
+
 from sqlalchemy import JSON, TypeDecorator
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.engine import Dialect
+from sqlalchemy.sql.type_api import TypeEngine
 
 
 class JSONType(TypeDecorator):
@@ -21,7 +25,7 @@ class JSONType(TypeDecorator):
     impl = JSON
     cache_ok = True
 
-    def load_dialect_impl(self, dialect):
+    def load_dialect_impl(self, dialect: Dialect) -> TypeEngine[Any]:
         """Load the appropriate JSON type based on the database dialect."""
         if dialect.name == "postgresql":
             return dialect.type_descriptor(JSONB())

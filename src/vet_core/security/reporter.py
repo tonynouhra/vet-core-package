@@ -262,15 +262,19 @@ class SecurityReporter:
             assessment = assessment_map.get(vuln.id)
 
             row = [
-                vuln.id,
-                vuln.package_name,
-                vuln.installed_version,
-                vuln.severity.value,
-                vuln.cvss_score or "",
+                str(vuln.id),
+                str(vuln.package_name),
+                str(vuln.installed_version),
+                str(vuln.severity.value),
+                str(vuln.cvss_score) if vuln.cvss_score is not None else "",
                 f"{assessment.risk_score:.1f}" if assessment else "",
-                assessment.priority_level if assessment else "",
+                str(assessment.priority_level) if assessment else "",
                 "Yes" if vuln.is_fixable else "No",
-                vuln.recommended_fix_version or "",
+                (
+                    str(vuln.recommended_fix_version)
+                    if vuln.recommended_fix_version
+                    else ""
+                ),
                 (
                     vuln.description.replace("\n", " ").replace("\r", "")
                     if vuln.description
@@ -397,7 +401,11 @@ class SecurityReporter:
                         first_seen = i
                     last_seen = i
 
-            if first_seen is not None and last_seen < len(reports) - 1:
+            if (
+                first_seen is not None
+                and last_seen is not None
+                and last_seen < len(reports) - 1
+            ):
                 remediated.append(
                     {
                         "vulnerability_id": vuln_id,

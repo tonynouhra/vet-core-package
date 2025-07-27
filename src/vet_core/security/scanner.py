@@ -329,8 +329,8 @@ class VulnerabilityScanner:
                 validate_first_arg=True,  # Validate pip-audit executable path
                 timeout=10,
             )
-            if result.returncode == 0:
-                return result.stdout.strip()
+            if result.returncode == 0 and result.stdout:
+                return str(result.stdout).strip()
         except SubprocessSecurityError as e:
             self.logger.warning(
                 f"Security validation failed for pip-audit version check: {e}"

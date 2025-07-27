@@ -372,10 +372,10 @@ class SecurityMetricsAnalyzer:
                 vulnerability_timelines[event.vulnerability_id].append(event)
 
         # Calculate time intervals
-        detection_times = []
+        detection_times: List[float] = []
         assessment_times = []
         resolution_times = []
-        verification_times = []
+        verification_times: List[float] = []
 
         for vuln_id, vuln_events in vulnerability_timelines.items():
             vuln_events.sort(key=lambda e: e.timestamp)
@@ -644,7 +644,7 @@ class SecurityMetricsAnalyzer:
         current_metrics = self.calculate_current_metrics(period_days, include_trends)
 
         # Build report
-        report = {
+        report: Dict[str, Any] = {
             "report_metadata": {
                 "generated_at": datetime.now().isoformat(),
                 "analysis_period_days": period_days,
@@ -655,6 +655,7 @@ class SecurityMetricsAnalyzer:
         }
 
         # Add trend analysis if requested
+        trend_analysis_data: List[Dict[str, Any]] = []
         if include_trends:
             trend_metrics = [
                 "total_vulnerabilities",
@@ -663,22 +664,24 @@ class SecurityMetricsAnalyzer:
                 "sla_compliance_rate",
             ]
             trends = self.analyze_trends(trend_metrics, period_days)
-            report["trend_analysis"] = [trend.to_dict() for trend in trends]
+            trend_analysis_data = [trend.to_dict() for trend in trends]
+            report["trend_analysis"] = trend_analysis_data
 
         # Add historical data if requested
         if include_historical:
             historical_metrics = self._get_historical_metrics(
                 period_days * 3
             )  # 3x period for context
-            report["historical_data"] = [
+            historical_data = [
                 metrics.to_dict() for metrics in historical_metrics[-30:]
             ]  # Last 30 snapshots
+            report["historical_data"] = historical_data
 
         # Add insights and recommendations
-        report["insights"] = self._generate_insights(
-            current_metrics, report.get("trend_analysis", [])
-        )
-        report["recommendations"] = self._generate_recommendations(current_metrics)
+        insights = self._generate_insights(current_metrics, trend_analysis_data)
+        report["insights"] = insights
+        recommendations = self._generate_recommendations(current_metrics)
+        report["recommendations"] = recommendations
 
         # Save to file if requested
         if output_file:

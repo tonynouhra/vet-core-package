@@ -636,7 +636,7 @@ class VulnerabilityStatusTracker:
         overdue_records.sort(
             key=lambda r: (
                 r.progress_metrics.sla_deadline
-                if r.progress_metrics.sla_deadline
+                if r.progress_metrics and r.progress_metrics.sla_deadline
                 else datetime.now()
             ),
             reverse=False,

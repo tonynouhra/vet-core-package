@@ -1008,12 +1008,13 @@ class RiskAssessor:
         """
         total_vulns = sum(len(vulns) for vulns in prioritized.values())
 
+        recommendations: List[str] = []
         summary = {
             "total_vulnerabilities": total_vulns,
             "priority_counts": {
                 level: len(vulns) for level, vulns in prioritized.items()
             },
-            "recommendations": [],
+            "recommendations": recommendations,
             "risk_metrics": {},
             "timeline_analysis": {},
             "confidence_analysis": {},
@@ -1022,25 +1023,25 @@ class RiskAssessor:
         # Generate priority-based recommendations
         if prioritized["immediate"]:
             count = len(prioritized["immediate"])
-            summary["recommendations"].append(
+            recommendations.append(
                 f"CRITICAL: {count} vulnerabilities require immediate attention (within 24 hours)"
             )
 
         if prioritized["urgent"]:
             count = len(prioritized["urgent"])
-            summary["recommendations"].append(
+            recommendations.append(
                 f"HIGH: {count} vulnerabilities should be addressed within 72 hours"
             )
 
         if prioritized["scheduled"]:
             count = len(prioritized["scheduled"])
-            summary["recommendations"].append(
+            recommendations.append(
                 f"MEDIUM: {count} vulnerabilities should be scheduled for next week"
             )
 
         if prioritized["planned"]:
             count = len(prioritized["planned"])
-            summary["recommendations"].append(
+            recommendations.append(
                 f"LOW: {count} vulnerabilities can be planned for next month"
             )
 
@@ -1144,11 +1145,15 @@ class RiskAssessor:
         trend_data["vulnerability_trends"] = {
             "total_vulnerabilities": sum(vuln_counts),
             "average_per_scan": sum(vuln_counts) / len(vuln_counts),
-            "trend_direction": self._calculate_trend_direction([float(x) for x in vuln_counts]),
+            "trend_direction": self._calculate_trend_direction(
+                [float(x) for x in vuln_counts]
+            ),
         }
 
         # Analyze severity trends
-        severity_counts: Dict[str, List[int]] = {severity.value: [] for severity in VulnerabilitySeverity}
+        severity_counts: Dict[str, List[int]] = {
+            severity.value: [] for severity in VulnerabilitySeverity
+        }
         for report in sorted_reports:
             for severity in VulnerabilitySeverity:
                 count = len(report.get_vulnerabilities_by_severity(severity))

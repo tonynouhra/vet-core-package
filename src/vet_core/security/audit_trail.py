@@ -522,7 +522,7 @@ class SecurityAuditTrail:
         self.log_event(event)
 
     def log_compliance_check(
-        self, metrics: ComplianceMetrics, policy_violations: List[str] = None
+        self, metrics: ComplianceMetrics, policy_violations: Optional[List[str]] = None
     ) -> None:
         """
         Log a compliance check and its results.
@@ -620,7 +620,7 @@ class SecurityAuditTrail:
 
                 if limit:
                     query += " LIMIT ?"
-                    params.append(limit)
+                    params.append(str(limit))
 
                 cursor.execute(query, params)
                 rows = cursor.fetchall()
@@ -683,7 +683,7 @@ class SecurityAuditTrail:
         recent_events = self.get_audit_events(start_date=thirty_days_ago)
 
         # Calculate mean time to detection (time between vulnerability publication and detection)
-        detection_times = []
+        detection_times: List[float] = []
         for event in recent_events:
             if event.event_type == AuditEventType.VULNERABILITY_DETECTED:
                 # This would require vulnerability publication dates from external sources
@@ -692,7 +692,7 @@ class SecurityAuditTrail:
 
         # Calculate mean time to remediation
         remediation_times = []
-        vulnerability_timelines = {}
+        vulnerability_timelines: Dict[str, List[AuditEvent]] = {}
 
         for event in recent_events:
             if event.vulnerability_id:
@@ -933,7 +933,7 @@ class SecurityAuditTrail:
         self, events: List[AuditEvent]
     ) -> Dict[str, Any]:
         """Analyze vulnerability lifecycles from audit events."""
-        vulnerability_data = {}
+        vulnerability_data: Dict[str, Dict[str, Any]] = {}
 
         for event in events:
             if event.vulnerability_id:
@@ -946,7 +946,7 @@ class SecurityAuditTrail:
                 vulnerability_data[event.vulnerability_id]["events"].append(event)
 
         # Analyze lifecycles
-        lifecycle_analysis = {
+        lifecycle_analysis: Dict[str, Any] = {
             "total_vulnerabilities_tracked": len(vulnerability_data),
             "resolved_vulnerabilities": 0,
             "unresolved_vulnerabilities": 0,
@@ -1035,7 +1035,7 @@ class SecurityAuditTrail:
                     (cutoff_date.isoformat(),),
                 )
 
-                count = cursor.fetchone()[0]
+                count: int = cursor.fetchone()[0]
 
                 # Delete old events
                 cursor.execute(

@@ -435,16 +435,24 @@ class PerformanceMonitor:
         Returns:
             Dictionary with read and write I/O in MB
         """
-        # Get initial I/O counters
-        initial_io = self.process.io_counters()
+        try:
+            # Get initial I/O counters (not available on all platforms)
+            initial_io = self.process.io_counters()  # type: ignore[attr-defined]
+        except (AttributeError, psutil.AccessDenied):
+            logger.warning("I/O counters not available on this platform")
+            return {"read": 0.0, "write": 0.0}
 
         try:
             operation()
         except Exception as e:
             logger.error(f"Error during I/O monitoring operation: {e}")
 
-        # Get final I/O counters
-        final_io = self.process.io_counters()
+        try:
+            # Get final I/O counters
+            final_io = self.process.io_counters()  # type: ignore[attr-defined]
+        except (AttributeError, psutil.AccessDenied):
+            logger.warning("I/O counters not available on this platform")
+            return {"read": 0.0, "write": 0.0}
 
         read_mb = (final_io.read_bytes - initial_io.read_bytes) / 1024 / 1024
         write_mb = (final_io.write_bytes - initial_io.write_bytes) / 1024 / 1024

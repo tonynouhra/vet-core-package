@@ -21,10 +21,10 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from .assessor import RiskAssessor
-from .audit_trail import AuditEventType, SecurityAuditTrail
+from .audit_trail import AuditEvent, AuditEventType, SecurityAuditTrail
 from .compliance import ComplianceFramework, SecurityComplianceManager
 from .metrics_analyzer import SecurityMetricsAnalyzer
-from .models import SecurityReport, VulnerabilitySeverity
+from .models import SecurityReport, VulnerabilitySeverity, Vulnerability
 from .reporter import SecurityReporter
 from .scanner import VulnerabilityScanner
 from .status_tracker import VulnerabilityStatus, VulnerabilityStatusTracker
@@ -136,6 +136,10 @@ class VulnerabilityDashboard:
 
     def _show_single_vulnerability_status(self, vulnerability_id: str) -> None:
         """Show detailed status for a single vulnerability."""
+        if not self.current_report:
+            print("❌ No scan data available. Run 'scan' command first.")
+            return
+
         # Find vulnerability in current report
         vulnerability = None
         for vuln in self.current_report.vulnerabilities:
@@ -206,6 +210,10 @@ class VulnerabilityDashboard:
 
     def _show_all_vulnerabilities_status(self) -> None:
         """Show status overview for all vulnerabilities."""
+        if not self.current_report:
+            print("❌ No scan data available. Run 'scan' command first.")
+            return
+
         print(f"\n📊 Vulnerability Status Overview")
         print("=" * 60)
         print(f"Total Vulnerabilities: {self.current_report.vulnerability_count}")
@@ -215,7 +223,7 @@ class VulnerabilityDashboard:
         print(f"Packages Scanned: {self.current_report.total_packages_scanned}")
 
         # Group by severity
-        severity_groups = {
+        severity_groups: Dict[VulnerabilitySeverity, List[Vulnerability]] = {
             VulnerabilitySeverity.CRITICAL: [],
             VulnerabilitySeverity.HIGH: [],
             VulnerabilitySeverity.MEDIUM: [],
@@ -319,6 +327,10 @@ class VulnerabilityDashboard:
         self, output_file: Optional[Path], format_type: str
     ) -> None:
         """Generate summary report."""
+        if not self.current_report:
+            print("❌ No scan data available. Run 'scan' command first.")
+            return
+
         report_data = {
             "scan_summary": {
                 "scan_date": self.current_report.scan_date.isoformat(),
@@ -343,6 +355,10 @@ class VulnerabilityDashboard:
         self, output_file: Optional[Path], format_type: str
     ) -> None:
         """Generate detailed report."""
+        if not self.current_report:
+            print("❌ No scan data available. Run 'scan' command first.")
+            return
+
         assessments = self.risk_assessor.assess_report(self.current_report)
 
         report_data = {
@@ -364,6 +380,10 @@ class VulnerabilityDashboard:
         self, output_file: Optional[Path], format_type: str
     ) -> None:
         """Generate compliance report."""
+        if not self.current_report:
+            print("❌ No scan data available. Run 'scan' command first.")
+            return
+
         violations, metrics = self.compliance_manager.check_compliance(
             self.current_report
         )
@@ -397,11 +417,11 @@ class VulnerabilityDashboard:
         else:
             self._print_metrics_text_report(metrics_report)
 
-    def _analyze_security_trends(self, events: List) -> Dict[str, Any]:
+    def _analyze_security_trends(self, events: List[AuditEvent]) -> Dict[str, Any]:
         """Analyze security trends from audit events."""
         # Group events by date
-        daily_stats = {}
-        vulnerability_lifecycle = {}
+        daily_stats: Dict[str, Dict[str, int]] = {}
+        vulnerability_lifecycle: Dict[str, List[AuditEvent]] = {}
 
         for event in events:
             date_key = event.timestamp.date().isoformat()
@@ -566,7 +586,7 @@ class VulnerabilityDashboard:
             print(f"    Timeline: {assessment['recommended_timeline_hours']}h")
 
     def _print_compliance_text_report(
-        self, report: Dict[str, Any], violations: List, metrics
+        self, report: Dict[str, Any], violations: List[Any], metrics: Any
     ) -> None:
         """Print compliance text format report."""
         print(f"\n📊 Compliance Report")
@@ -719,17 +739,22 @@ class VulnerabilityDashboard:
 
         for record in overdue[:10]:  # Show first 10
             metrics = record.progress_metrics
-            days_overdue = (
-                (datetime.now() - metrics.sla_deadline).days
-                if metrics.sla_deadline
-                else 0
-            )
+            if metrics:
+                days_overdue = (
+                    (datetime.now() - metrics.sla_deadline).days
+                    if metrics.sla_deadline
+                    else 0
+                )
+                progress_percentage = metrics.progress_percentage
+            else:
+                days_overdue = 0
+                progress_percentage = 0.0
 
             print(f"• {record.vulnerability_id} - {record.package_name}")
             print(f"  Severity: {record.severity.value.upper()}")
             print(f"  Status: {record.current_status.value}")
             print(f"  Days Overdue: {days_overdue}")
-            print(f"  Progress: {metrics.progress_percentage:.1f}%")
+            print(f"  Progress: {progress_percentage:.1f}%")
 
     def show_help(self) -> None:
         """Display help information."""

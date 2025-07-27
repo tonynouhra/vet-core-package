@@ -279,9 +279,17 @@ class SecurityNotifier:
 
             # Validate required email configuration
             if not self.config.email_from or not self.config.email_to:
-                raise ValueError("Email configuration incomplete: email_from and email_to are required")
-            if not self.config.smtp_server or not self.config.smtp_username or not self.config.smtp_password:
-                raise ValueError("SMTP configuration incomplete: server, username, and password are required")
+                raise ValueError(
+                    "Email configuration incomplete: email_from and email_to are required"
+                )
+            if (
+                not self.config.smtp_server
+                or not self.config.smtp_username
+                or not self.config.smtp_password
+            ):
+                raise ValueError(
+                    "SMTP configuration incomplete: server, username, and password are required"
+                )
 
             # Create message
             msg = MIMEMultipart("alternative")
@@ -319,6 +327,11 @@ class SecurityNotifier:
     ) -> bool:
         """Send Slack notification about vulnerabilities."""
         try:
+            # Check if Slack webhook URL is configured
+            if not self.config.slack_webhook_url:
+                self.logger.error("Slack webhook URL not configured")
+                return False
+
             # Determine color based on severity
             color = (
                 "danger"
@@ -326,48 +339,50 @@ class SecurityNotifier:
                 else "warning" if report.high_count > 0 else "good"
             )
 
-            # Create Slack payload
+            # Create Slack payload with proper typing
+            attachments = [
+                {
+                    "color": color,
+                    "fields": [
+                        {
+                            "title": "Total Vulnerabilities",
+                            "value": str(report.vulnerability_count),
+                            "short": True,
+                        },
+                        {
+                            "title": "Critical",
+                            "value": str(report.critical_count),
+                            "short": True,
+                        },
+                        {
+                            "title": "High",
+                            "value": str(report.high_count),
+                            "short": True,
+                        },
+                        {
+                            "title": "Medium",
+                            "value": str(report.medium_count),
+                            "short": True,
+                        },
+                        {
+                            "title": "Low",
+                            "value": str(report.low_count),
+                            "short": True,
+                        },
+                        {
+                            "title": "Fixable",
+                            "value": str(report.fixable_count),
+                            "short": True,
+                        },
+                    ],
+                    "footer": f"Scan completed at {report.scan_date.strftime('%Y-%m-%d %H:%M:%S UTC')}",
+                    "ts": int(report.scan_date.timestamp()),
+                }
+            ]
+
             payload = {
                 "text": f"{self.config.notification_title_prefix} - Vulnerability Scan Results",
-                "attachments": [
-                    {
-                        "color": color,
-                        "fields": [
-                            {
-                                "title": "Total Vulnerabilities",
-                                "value": str(report.vulnerability_count),
-                                "short": True,
-                            },
-                            {
-                                "title": "Critical",
-                                "value": str(report.critical_count),
-                                "short": True,
-                            },
-                            {
-                                "title": "High",
-                                "value": str(report.high_count),
-                                "short": True,
-                            },
-                            {
-                                "title": "Medium",
-                                "value": str(report.medium_count),
-                                "short": True,
-                            },
-                            {
-                                "title": "Low",
-                                "value": str(report.low_count),
-                                "short": True,
-                            },
-                            {
-                                "title": "Fixable",
-                                "value": str(report.fixable_count),
-                                "short": True,
-                            },
-                        ],
-                        "footer": f"Scan completed at {report.scan_date.strftime('%Y-%m-%d %H:%M:%S UTC')}",
-                        "ts": int(report.scan_date.timestamp()),
-                    }
-                ],
+                "attachments": attachments,
             }
 
             # Add immediate action items if critical vulnerabilities exist
@@ -378,7 +393,7 @@ class SecurityNotifier:
                     for vuln, assessment in immediate_vulns[:5]:  # Limit to first 5
                         vuln_list.append(f"• {vuln.package_name} ({vuln.id})")
 
-                    payload["attachments"].append(
+                    attachments.append(
                         {
                             "color": "danger",
                             "title": "🚨 Immediate Action Required (24h)",
@@ -435,7 +450,7 @@ class SecurityNotifier:
             # Validate GitHub configuration
             if not self.config.github_repo:
                 raise ValueError("GitHub repository not configured")
-            
+
             # Send to GitHub API
             repo_parts = self.config.github_repo.split("/")
             if len(repo_parts) != 2:
@@ -458,6 +473,11 @@ class SecurityNotifier:
     def _send_slack_message(self, title: str, message: str) -> bool:
         """Send a simple Slack message."""
         try:
+            # Check if Slack webhook URL is configured
+            if not self.config.slack_webhook_url:
+                self.logger.error("Slack webhook URL not configured")
+                return False
+
             payload = {
                 "text": title,
                 "attachments": [{"text": message, "color": "good"}],
@@ -479,6 +499,23 @@ class SecurityNotifier:
     def _send_email_message(self, title: str, message: str) -> bool:
         """Send a simple email message."""
         try:
+            # Check if email configuration is complete
+            if not self.config.email_from:
+                self.logger.error("Email 'from' address not configured")
+                return False
+
+            if not self.config.email_to:
+                self.logger.error("Email 'to' addresses not configured")
+                return False
+
+            if not self.config.smtp_server:
+                self.logger.error("SMTP server not configured")
+                return False
+
+            if not self.config.smtp_username or not self.config.smtp_password:
+                self.logger.error("SMTP credentials not configured")
+                return False
+
             msg = MIMEText(message)
             msg["Subject"] = title
             msg["From"] = self.config.email_from
