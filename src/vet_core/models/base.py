@@ -109,6 +109,16 @@ class BaseModel(Base):
 
     __abstract__ = True
 
+    def __init__(self, **kwargs: Any) -> None:
+        """Initialize BaseModel with proper default values."""
+        # Set default values if not provided
+        if "is_deleted" not in kwargs:
+            kwargs["is_deleted"] = False
+        if "id" not in kwargs:
+            kwargs["id"] = uuid.uuid4()
+
+        super().__init__(**kwargs)
+
     # Primary key - UUID for distributed systems
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),

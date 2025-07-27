@@ -113,7 +113,24 @@ async def test_session_manager(
 
     # Initialize database schema
     async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        try:
+            print(
+                f"Creating tables for {len(Base.metadata.tables)} registered tables..."
+            )
+            for table_name in Base.metadata.tables.keys():
+                print(f"  - {table_name}")
+            await conn.run_sync(Base.metadata.create_all)
+            print("Tables created successfully!")
+
+            # Verify tables were created
+            result = await conn.execute(
+                text("SELECT name FROM sqlite_master WHERE type='table'")
+            )
+            created_tables = [row[0] for row in result.fetchall()]
+            print(f"Tables found in database: {created_tables}")
+        except Exception as e:
+            print(f"Error creating tables: {e}")
+            raise
 
     yield session_manager
 
