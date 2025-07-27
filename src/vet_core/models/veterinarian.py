@@ -23,8 +23,9 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
-from vet_core.database.types import JSONType
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from vet_core.database.types import JSONType
 
 from .base import BaseModel
 

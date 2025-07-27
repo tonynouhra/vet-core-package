@@ -6,16 +6,17 @@ during dependency upgrades to detect regressions.
 """
 
 import json
+import logging
 import os
-import psutil
 import subprocess
 import sys
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Callable
-import logging
+from typing import Any, Callable, Dict, List, Optional
+
+import psutil
 
 logger = logging.getLogger(__name__)
 

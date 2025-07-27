@@ -3,18 +3,19 @@ Tests for security vulnerability scanner.
 """
 
 import json
-import pytest
+import subprocess
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
-import subprocess
+from unittest.mock import MagicMock, Mock, patch
 
+import pytest
+
+from vet_core.security.models import VulnerabilitySeverity
 from vet_core.security.scanner import (
-    VulnerabilityScanner,
     ScannerError,
     ScanTimeoutError,
+    VulnerabilityScanner,
 )
-from vet_core.security.models import VulnerabilitySeverity
 
 
 class TestVulnerabilityScanner:

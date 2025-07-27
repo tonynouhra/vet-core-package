@@ -8,16 +8,17 @@ through various channels including email, Slack, GitHub issues, and more.
 import json
 import logging
 import smtplib
-from datetime import datetime
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from pathlib import Path
-from typing import Dict, List, Optional, Any, Union
-import requests
 from dataclasses import dataclass
+from datetime import datetime
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
 
-from .models import SecurityReport, Vulnerability, VulnerabilitySeverity
+import requests
+
 from .assessor import RiskAssessor
+from .models import SecurityReport, Vulnerability, VulnerabilitySeverity
 
 logger = logging.getLogger(__name__)
 

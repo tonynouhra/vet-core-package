@@ -6,19 +6,19 @@ before applying them, including compatibility checking and rollback mechanisms.
 """
 
 import json
-import subprocess
-import tempfile
-import shutil
+import logging
 import os
+import shutil
+import subprocess
 import sys
+import tempfile
+import venv
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any
-import venv
-import logging
+from typing import Any, Dict, List, Optional, Tuple
 
-from .models import Vulnerability, VulnerabilitySeverity, RemediationAction
+from .models import RemediationAction, Vulnerability, VulnerabilitySeverity
 
 
 logger = logging.getLogger(__name__)

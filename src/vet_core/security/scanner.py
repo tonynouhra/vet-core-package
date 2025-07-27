@@ -6,14 +6,14 @@ JSON output into structured vulnerability data.
 """
 
 import json
+import logging
 import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Any
-import logging
+from typing import Any, Dict, List, Optional
 
-from .models import Vulnerability, VulnerabilitySeverity, SecurityReport
+from .models import SecurityReport, Vulnerability, VulnerabilitySeverity
 
 logger = logging.getLogger(__name__)
 

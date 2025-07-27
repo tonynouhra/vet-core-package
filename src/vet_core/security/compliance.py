@@ -12,20 +12,20 @@ Requirements addressed:
 
 import json
 import logging
-from datetime import datetime, timedelta
-from pathlib import Path
-from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta
 from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
-from .models import SecurityReport, Vulnerability, VulnerabilitySeverity
+from .assessor import RiskAssessor
 from .audit_trail import (
-    SecurityAuditTrail,
-    ComplianceMetrics,
     AuditEvent,
     AuditEventType,
+    ComplianceMetrics,
+    SecurityAuditTrail,
 )
-from .assessor import RiskAssessor
+from .models import SecurityReport, Vulnerability, VulnerabilitySeverity
 
 
 class ComplianceFramework(Enum):

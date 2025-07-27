@@ -5,11 +5,11 @@ This module defines the core data structures used throughout the security
 system for tracking vulnerabilities, assessments, and remediation actions.
 """
 
+import json
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional, Dict, Any
-import json
+from typing import Any, Dict, List, Optional
 
 
 class VulnerabilitySeverity(Enum):

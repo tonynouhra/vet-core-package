@@ -14,31 +14,32 @@ Requirements addressed:
 
 import json
 import tempfile
-import pytest
 from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import Mock, patch
 
+import pytest
+
+from vet_core.security.assessor import RiskAssessment, RiskAssessor
 from vet_core.security.audit_trail import (
-    SecurityAuditTrail,
     AuditEvent,
     AuditEventType,
     ComplianceMetrics,
+    SecurityAuditTrail,
 )
 from vet_core.security.compliance import (
-    SecurityComplianceManager,
     ComplianceFramework,
-    PolicyRule,
     ComplianceViolation,
+    PolicyRule,
+    SecurityComplianceManager,
 )
-from vet_core.security.scanner import VulnerabilityScanner
-from vet_core.security.assessor import RiskAssessor, RiskAssessment
 from vet_core.security.models import (
+    RemediationAction,
     SecurityReport,
     Vulnerability,
     VulnerabilitySeverity,
-    RemediationAction,
 )
+from vet_core.security.scanner import VulnerabilityScanner
 
 
 class TestComplianceIntegration:

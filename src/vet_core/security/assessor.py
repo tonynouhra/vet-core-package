@@ -19,11 +19,11 @@ Requirements addressed:
 
 import logging
 import math
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple, Set
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Set, Tuple
 
-from .models import Vulnerability, VulnerabilitySeverity, SecurityReport
+from .models import SecurityReport, Vulnerability, VulnerabilitySeverity
 
 logger = logging.getLogger(__name__)
 

@@ -9,10 +9,11 @@ customizable thresholds.
 import json
 import os
 from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
+
 import yaml
-from enum import Enum
 
 from .models import SecurityConfig, VulnerabilitySeverity
 

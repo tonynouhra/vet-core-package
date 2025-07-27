@@ -13,16 +13,16 @@ Requirements addressed:
 import json
 import logging
 import sqlite3
-from datetime import datetime, timedelta
-from pathlib import Path
-from typing import Dict, List, Optional, Any, Tuple
-from dataclasses import dataclass, field
-from enum import Enum
 import uuid
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
-from .models import Vulnerability, VulnerabilitySeverity, SecurityReport
 from .assessor import RiskAssessment
-from .audit_trail import SecurityAuditTrail, AuditEvent, AuditEventType
+from .audit_trail import AuditEvent, AuditEventType, SecurityAuditTrail
+from .models import SecurityReport, Vulnerability, VulnerabilitySeverity
 
 
 class VulnerabilityStatus(Enum):

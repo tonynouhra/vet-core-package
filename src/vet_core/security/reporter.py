@@ -6,15 +6,15 @@ reports from vulnerability data, including structured reports, summaries,
 and audit trails.
 """
 
+import csv
 import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Any, TextIO
-import csv
+from typing import Any, Dict, List, Optional, TextIO
 
+from .assessor import RiskAssessment, RiskAssessor
 from .models import SecurityReport, Vulnerability, VulnerabilitySeverity
-from .assessor import RiskAssessor, RiskAssessment
 
 logger = logging.getLogger(__name__)
 

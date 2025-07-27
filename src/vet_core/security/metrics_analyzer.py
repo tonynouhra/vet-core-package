@@ -12,20 +12,20 @@ Requirements addressed:
 
 import json
 import logging
+import sqlite3
 import statistics
+from collections import Counter, defaultdict
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Tuple
-from dataclasses import dataclass, field
-from collections import defaultdict, Counter
-import sqlite3
+from typing import Any, Dict, List, Optional, Tuple
 
-from .models import VulnerabilitySeverity, SecurityReport
-from .audit_trail import SecurityAuditTrail, AuditEvent, AuditEventType
+from .audit_trail import AuditEvent, AuditEventType, SecurityAuditTrail
+from .models import SecurityReport, VulnerabilitySeverity
 from .status_tracker import (
-    VulnerabilityStatusTracker,
-    VulnerabilityStatus,
     ProgressStage,
+    VulnerabilityStatus,
+    VulnerabilityStatusTracker,
 )
 
 

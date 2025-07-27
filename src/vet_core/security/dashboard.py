@@ -13,21 +13,21 @@ Requirements addressed:
 import argparse
 import json
 import logging
+import sqlite3
 import sys
+from dataclasses import asdict
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional, Any
-from dataclasses import asdict
-import sqlite3
+from typing import Any, Dict, List, Optional
 
-from .models import VulnerabilitySeverity, SecurityReport
-from .scanner import VulnerabilityScanner
 from .assessor import RiskAssessor
-from .audit_trail import SecurityAuditTrail, AuditEventType
-from .compliance import SecurityComplianceManager, ComplianceFramework
-from .reporter import SecurityReporter
-from .status_tracker import VulnerabilityStatusTracker, VulnerabilityStatus
+from .audit_trail import AuditEventType, SecurityAuditTrail
+from .compliance import ComplianceFramework, SecurityComplianceManager
 from .metrics_analyzer import SecurityMetricsAnalyzer
+from .models import SecurityReport, VulnerabilitySeverity
+from .reporter import SecurityReporter
+from .scanner import VulnerabilityScanner
+from .status_tracker import VulnerabilityStatus, VulnerabilityStatusTracker
 
 
 class VulnerabilityDashboard:
