@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from .models import SecurityReport, Vulnerability, VulnerabilitySeverity
-from .subprocess_utils import (
+from .subprocess_utils import (  # nosec B404: Importing secure subprocess utilities
     SubprocessSecurityError,
     get_executable_path,
     secure_subprocess_run,

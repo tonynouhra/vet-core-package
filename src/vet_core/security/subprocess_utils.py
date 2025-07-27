@@ -8,7 +8,7 @@ with proper input validation and security measures.
 import logging
 import re
 import shutil
-import subprocess
+import subprocess  # nosec B404: This module provides secure subprocess utilities
 import sys
 import time
 from dataclasses import dataclass

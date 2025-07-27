@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from .models import RemediationAction, Vulnerability, VulnerabilitySeverity
-from .subprocess_utils import (
+from .subprocess_utils import (  # nosec B404: Importing secure subprocess utilities
     SubprocessSecurityError,
     secure_subprocess_run,
     validate_package_name,

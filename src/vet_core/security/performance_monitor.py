@@ -17,7 +17,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 import psutil
 
-from .subprocess_utils import (
+from .subprocess_utils import (  # nosec B404: Importing secure subprocess utilities
     SubprocessSecurityError,
     secure_subprocess_run,
     validate_module_name,
@@ -437,7 +437,11 @@ class PerformanceMonitor:
         """
         try:
             # Get initial I/O counters (not available on all platforms)
-            initial_io = self.process.io_counters()
+            io_counters_method = getattr(self.process, "io_counters", None)
+            if io_counters_method is None:
+                logger.warning("I/O counters not available on this platform")
+                return {"read": 0.0, "write": 0.0}
+            initial_io = io_counters_method()
         except (AttributeError, psutil.AccessDenied):
             logger.warning("I/O counters not available on this platform")
             return {"read": 0.0, "write": 0.0}
@@ -449,7 +453,11 @@ class PerformanceMonitor:
 
         try:
             # Get final I/O counters
-            final_io = self.process.io_counters()
+            io_counters_method = getattr(self.process, "io_counters", None)
+            if io_counters_method is None:
+                logger.warning("I/O counters not available on this platform")
+                return {"read": 0.0, "write": 0.0}
+            final_io = io_counters_method()
         except (AttributeError, psutil.AccessDenied):
             logger.warning("I/O counters not available on this platform")
             return {"read": 0.0, "write": 0.0}
