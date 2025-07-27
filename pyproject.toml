@@ -52,6 +52,11 @@ dependencies = [
     
     # Configuration and environment
     "python-dotenv>=1.0.0,<2.0.0",
+    
+    # Security and monitoring dependencies
+    "PyYAML>=6.0.0,<7.0.0",
+    "psutil>=5.9.0,<6.0.0",
+    "requests>=2.31.0,<3.0.0",
 ]
 
 [project.optional-dependencies]
@@ -73,6 +78,11 @@ dev = [
     "isort>=5.12.0,<6.0.0",
     "mypy>=1.7.0,<2.0.0",
     "pre-commit>=3.5.0,<4.0.0",
+    
+    # Type stubs for mypy
+    "types-PyYAML>=6.0.0,<7.0.0",
+    "types-psutil>=5.9.0,<6.0.0",
+    "types-requests>=2.31.0,<3.0.0",
     
     # Security
     "bandit[toml]>=1.7.0,<2.0.0",
