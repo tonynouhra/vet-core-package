@@ -10,24 +10,25 @@ This module tests the comprehensive compliance system including:
 
 import json
 import tempfile
-import pytest
 from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import Mock, patch
 
+import pytest
+
+from vet_core.security.assessor import RiskAssessor
+from vet_core.security.audit_trail import AuditEventType, SecurityAuditTrail
 from vet_core.security.compliance import (
-    SecurityComplianceManager,
     ComplianceFramework,
-    PolicyRule,
     ComplianceViolation,
+    PolicyRule,
+    SecurityComplianceManager,
 )
-from vet_core.security.audit_trail import SecurityAuditTrail, AuditEventType
 from vet_core.security.models import (
+    SecurityReport,
     Vulnerability,
     VulnerabilitySeverity,
-    SecurityReport,
 )
-from vet_core.security.assessor import RiskAssessor
 
 
 class TestSecurityComplianceManager:
