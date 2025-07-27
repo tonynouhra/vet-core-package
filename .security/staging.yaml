@@ -1,0 +1,47 @@
+environment: staging
+base_config:
+  scan_schedule: '0 6 * * *'
+  severity_thresholds:
+    critical: 24
+    high: 48
+    medium: 120
+    low: 336
+  notification_channels:
+  - dev-team@company.com
+  auto_fix_enabled: true
+  max_auto_fix_severity: medium
+  scanner_timeout: 300
+notifications:
+  email:
+  - dev-team@company.com
+  slack_webhook: null
+  teams_webhook: null
+  github_issues: false
+  console: true
+scanner:
+  primary_scanner: pip-audit
+  backup_scanners:
+  - safety
+  timeout: 450
+  retry_attempts: 4
+  retry_delay: 45
+  output_format: json
+  include_dev_dependencies: true
+auto_fix:
+  enabled: true
+  max_severity: medium
+  dry_run: false
+  require_approval: true
+  backup_before_fix: true
+  rollback_on_failure: true
+  test_after_fix: true
+  excluded_packages: []
+compliance:
+  audit_retention_days: 730  # 2 years
+  compliance_standards:
+  - SOC2
+  - ISO27001
+  generate_reports: true
+  report_schedule: '0 0 1 * *'
+  export_format: json
+  include_remediation_evidence: true

@@ -1,0 +1,45 @@
+environment: development
+base_config:
+  scan_schedule: '0 6 * * *'
+  severity_thresholds:
+    critical: 24
+    high: 72
+    medium: 168
+    low: 720
+  notification_channels: []
+  auto_fix_enabled: true
+  max_auto_fix_severity: high
+  scanner_timeout: 300
+notifications:
+  email: []
+  slack_webhook: null
+  teams_webhook: null
+  github_issues: false
+  console: true
+scanner:
+  primary_scanner: pip-audit
+  backup_scanners:
+  - safety
+  timeout: 300
+  retry_attempts: 3
+  retry_delay: 30
+  output_format: json
+  include_dev_dependencies: true
+auto_fix:
+  enabled: true
+  max_severity: high
+  dry_run: true
+  require_approval: false
+  backup_before_fix: true
+  rollback_on_failure: true
+  test_after_fix: true
+  excluded_packages: []
+compliance:
+  audit_retention_days: 365
+  compliance_standards:
+  - SOC2
+  - ISO27001
+  generate_reports: true
+  report_schedule: '0 0 1 * *'
+  export_format: json
+  include_remediation_evidence: true

@@ -1,0 +1,567 @@
+name: Dependency Upgrade Validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      package_name:
+        description: 'Package name to upgrade (optional, leave empty for vulnerability scan)'
+        required: false
+        type: string
+      target_version:
+        description: 'Target version (required if package_name is specified)'
+        required: false
+        type: string
+      python_versions:
+        description: 'Python versions to test (comma-separated)'
+        required: false
+        default: '3.11,3.12'
+        type: string
+  schedule:
+    # Run weekly on Sundays at 2 AM UTC
+    - cron: '0 2 * * 0'
+  push:
+    paths:
+      - 'pyproject.toml'
+      - 'requirements*.txt'
+      - '.github/workflows/upgrade-validation.yml'
+
+env:
+  PYTHON_DEFAULT_VERSION: "3.11"
+
+jobs:
+  prepare:
+    name: Prepare Upgrade Testing
+    runs-on: ubuntu-latest
+    outputs:
+      python-versions: ${{ steps.setup.outputs.python-versions }}
+      test-matrix: ${{ steps.setup.outputs.test-matrix }}
+      has-vulnerabilities: ${{ steps.scan.outputs.has-vulnerabilities }}
+      vulnerabilities: ${{ steps.scan.outputs.vulnerabilities }}
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_DEFAULT_VERSION }}
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+
+    - name: Setup test configuration
+      id: setup
+      run: |
+        # Parse Python versions from input or use default
+        if [ -n "${{ github.event.inputs.python_versions }}" ]; then
+          PYTHON_VERSIONS="${{ github.event.inputs.python_versions }}"
+        else
+          PYTHON_VERSIONS="3.11,3.12"
+        fi
+        
+        # Convert to JSON array
+        PYTHON_ARRAY=$(echo "$PYTHON_VERSIONS" | jq -R 'split(",") | map(select(length > 0))')
+        echo "python-versions=$PYTHON_ARRAY" >> $GITHUB_OUTPUT
+        
+        # Create test matrix
+        if [ -n "${{ github.event.inputs.package_name }}" ]; then
+          # Single package test
+          TEST_MATRIX=$(jq -n --arg pkg "${{ github.event.inputs.package_name }}" --arg ver "${{ github.event.inputs.target_version }}" '[{package: $pkg, version: $ver}]')
+        else
+          # Will be populated by vulnerability scan
+          TEST_MATRIX="[]"
+        fi
+        echo "test-matrix=$TEST_MATRIX" >> $GITHUB_OUTPUT
+
+    - name: Run vulnerability scan
+      id: scan
+      run: |
+        # Run pip-audit to find vulnerabilities
+        if pip-audit --format=json --output=vulnerabilities.json; then
+          echo "Vulnerability scan completed successfully"
+        else
+          echo "Vulnerability scan completed with findings"
+        fi
+        
+        # Check if vulnerabilities were found
+        if [ -f vulnerabilities.json ] && [ "$(jq '.vulnerabilities | length' vulnerabilities.json)" -gt 0 ]; then
+          echo "has-vulnerabilities=true" >> $GITHUB_OUTPUT
+          echo "vulnerabilities=$(cat vulnerabilities.json | jq -c .)" >> $GITHUB_OUTPUT
+        else
+          echo "has-vulnerabilities=false" >> $GITHUB_OUTPUT
+          echo "vulnerabilities={\"vulnerabilities\": []}" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Upload vulnerability scan results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: vulnerability-scan-results
+        path: vulnerabilities.json
+
+  baseline-performance:
+    name: Establish Performance Baseline
+    runs-on: ubuntu-latest
+    needs: prepare
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: test_vet_core
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_DEFAULT_VERSION }}
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+
+    - name: Set up test environment
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_vet_core
+      run: |
+        PGPASSWORD=postgres createdb -h localhost -U postgres test_vet_core_test || true
+
+    - name: Collect baseline performance metrics
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_vet_core
+        TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_vet_core_test
+      run: |
+        python -c "
+import sys
+sys.path.insert(0, 'src')
+from vet_core.security.performance_monitor import PerformanceMonitor
+from pathlib import Path
+
+monitor = PerformanceMonitor(Path.cwd())
+metrics = monitor.collect_comprehensive_metrics()
+monitor.save_baseline(metrics)
+print('Baseline performance metrics collected and saved')
+"
+
+    - name: Upload baseline metrics
+      uses: actions/upload-artifact@v4
+      with:
+        name: performance-baseline
+        path: performance_baseline.json
+
+  upgrade-validation:
+    name: Validate Upgrades - Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    needs: [prepare, baseline-performance]
+    if: needs.prepare.outputs.has-vulnerabilities == 'true' || github.event.inputs.package_name != ''
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ${{ fromJson(needs.prepare.outputs.python-versions) }}
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: test_vet_core
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+
+    - name: Download baseline metrics
+      uses: actions/download-artifact@v4
+      with:
+        name: performance-baseline
+        path: .
+
+    - name: Set up test environment
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_vet_core
+      run: |
+        PGPASSWORD=postgres createdb -h localhost -U postgres test_vet_core_test || true
+
+    - name: Run upgrade validation pipeline
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_vet_core
+        TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_vet_core_test
+      run: |
+        # Create output directory
+        mkdir -p upgrade-test-results
+        
+        # Run the upgrade testing pipeline
+        if [ -n "${{ github.event.inputs.package_name }}" ]; then
+          # Test specific package
+          python scripts/upgrade_testing_pipeline.py \
+            --package "${{ github.event.inputs.package_name }}==${{ github.event.inputs.target_version }}" \
+            --python-versions ${{ matrix.python-version }} \
+            --output-dir upgrade-test-results \
+            --baseline-file performance_baseline.json \
+            --verbose
+        else
+          # Run vulnerability upgrade pipeline
+          python scripts/upgrade_testing_pipeline.py \
+            --python-versions ${{ matrix.python-version }} \
+            --output-dir upgrade-test-results \
+            --baseline-file performance_baseline.json \
+            --verbose
+        fi
+
+    - name: Upload upgrade test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: upgrade-test-results-python-${{ matrix.python-version }}
+        path: upgrade-test-results/
+
+    - name: Check upgrade test results
+      run: |
+        # Check if any upgrade tests failed
+        if find upgrade-test-results -name "*.json" -exec grep -l '"overall_success": false' {} \; | grep -q .; then
+          echo "❌ Some upgrade tests failed"
+          exit 1
+        else
+          echo "✅ All upgrade tests passed"
+        fi
+
+  security-verification:
+    name: Security Fix Verification
+    runs-on: ubuntu-latest
+    needs: [prepare, upgrade-validation]
+    if: needs.prepare.outputs.has-vulnerabilities == 'true'
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_DEFAULT_VERSION }}
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+
+    - name: Download upgrade test results
+      uses: actions/download-artifact@v4
+      with:
+        pattern: upgrade-test-results-*
+        path: all-upgrade-results/
+        merge-multiple: true
+
+    - name: Verify security fixes
+      run: |
+        echo "Verifying security fixes..."
+        
+        # Run pip-audit again to check if vulnerabilities are resolved
+        pip-audit --format=json --output=post-upgrade-vulnerabilities.json || true
+        
+        # Compare with original vulnerabilities
+        python -c "
+import json
+import sys
+
+# Load original vulnerabilities
+with open('all-upgrade-results/vulnerabilities.json', 'r') as f:
+    original = json.load(f)
+
+# Load post-upgrade vulnerabilities
+try:
+    with open('post-upgrade-vulnerabilities.json', 'r') as f:
+        current = json.load(f)
+except FileNotFoundError:
+    current = {'vulnerabilities': []}
+
+original_vulns = {v['id'] for v in original.get('vulnerabilities', [])}
+current_vulns = {v['id'] for v in current.get('vulnerabilities', [])}
+
+resolved_vulns = original_vulns - current_vulns
+remaining_vulns = original_vulns & current_vulns
+
+print(f'Original vulnerabilities: {len(original_vulns)}')
+print(f'Resolved vulnerabilities: {len(resolved_vulns)}')
+print(f'Remaining vulnerabilities: {len(remaining_vulns)}')
+
+if remaining_vulns:
+    print('❌ Some vulnerabilities remain unresolved:')
+    for vuln_id in remaining_vulns:
+        print(f'  - {vuln_id}')
+    sys.exit(1)
+else:
+    print('✅ All vulnerabilities have been resolved')
+"
+
+    - name: Upload security verification results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: security-verification-results
+        path: |
+          post-upgrade-vulnerabilities.json
+
+  performance-analysis:
+    name: Performance Regression Analysis
+    runs-on: ubuntu-latest
+    needs: [baseline-performance, upgrade-validation]
+    if: always() && needs.upgrade-validation.result != 'skipped'
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_DEFAULT_VERSION }}
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+
+    - name: Download all results
+      uses: actions/download-artifact@v4
+      with:
+        pattern: upgrade-test-results-*
+        path: all-results/
+        merge-multiple: true
+
+    - name: Download baseline metrics
+      uses: actions/download-artifact@v4
+      with:
+        name: performance-baseline
+        path: .
+
+    - name: Analyze performance regressions
+      run: |
+        python -c "
+import json
+import sys
+from pathlib import Path
+
+# Collect all performance results
+all_regressions = []
+significant_regressions = []
+
+for result_file in Path('all-results').glob('*.json'):
+    try:
+        with open(result_file, 'r') as f:
+            data = json.load(f)
+        
+        perf_results = data.get('performance_results', {})
+        regressions = perf_results.get('regressions', [])
+        
+        for regression in regressions:
+            all_regressions.append(regression)
+            if regression.get('regression_percent', 0) > regression.get('threshold_percent', 0):
+                significant_regressions.append(regression)
+    except Exception as e:
+        print(f'Error processing {result_file}: {e}')
+
+print(f'Total regressions detected: {len(all_regressions)}')
+print(f'Significant regressions: {len(significant_regressions)}')
+
+if significant_regressions:
+    print('❌ Significant performance regressions detected:')
+    for reg in significant_regressions:
+        print(f'  - {reg[\"metric_name\"]}: {reg[\"regression_percent\"]:.1f}% increase ({reg[\"severity\"]})')
+    sys.exit(1)
+else:
+    print('✅ No significant performance regressions detected')
+"
+
+  generate-report:
+    name: Generate Comprehensive Report
+    runs-on: ubuntu-latest
+    needs: [prepare, upgrade-validation, security-verification, performance-analysis]
+    if: always()
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_DEFAULT_VERSION }}
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: all-artifacts/
+
+    - name: Generate comprehensive report
+      run: |
+        python -c "
+import json
+import sys
+from pathlib import Path
+from datetime import datetime
+
+# Collect all results
+report_data = {
+    'timestamp': datetime.now().isoformat(),
+    'trigger': '${{ github.event_name }}',
+    'vulnerabilities': [],
+    'upgrade_results': {},
+    'security_verification': {},
+    'performance_analysis': {},
+    'overall_status': 'unknown'
+}
+
+# Load vulnerability scan results
+vuln_file = Path('all-artifacts/vulnerability-scan-results/vulnerabilities.json')
+if vuln_file.exists():
+    with open(vuln_file, 'r') as f:
+        vuln_data = json.load(f)
+        report_data['vulnerabilities'] = vuln_data.get('vulnerabilities', [])
+
+# Load upgrade test results
+upgrade_results = {}
+for result_dir in Path('all-artifacts').glob('upgrade-test-results-*'):
+    for result_file in result_dir.glob('*.json'):
+        with open(result_file, 'r') as f:
+            data = json.load(f)
+            package_name = data.get('package_name', 'unknown')
+            upgrade_results[package_name] = data
+
+report_data['upgrade_results'] = upgrade_results
+
+# Determine overall status
+all_successful = True
+if upgrade_results:
+    for package, result in upgrade_results.items():
+        if not result.get('overall_success', False):
+            all_successful = False
+            break
+
+report_data['overall_status'] = 'success' if all_successful else 'failure'
+
+# Save report data
+with open('upgrade_validation_report.json', 'w') as f:
+    json.dump(report_data, f, indent=2)
+
+print(f'Report generated: {len(report_data[\"vulnerabilities\"])} vulnerabilities, {len(upgrade_results)} packages tested')
+print(f'Overall status: {report_data[\"overall_status\"]}')
+"
+
+    - name: Create summary report
+      run: |
+        python scripts/upgrade_testing_pipeline.py \
+          --project-root . \
+          --output-dir . \
+          --verbose || true
+        
+        # Create a summary for GitHub
+        cat > upgrade_summary.md << 'EOF'
+        # Dependency Upgrade Validation Summary
+        
+        **Trigger:** ${{ github.event_name }}
+        **Date:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+        
+        ## Results
+        EOF
+        
+        # Add results based on job outcomes
+        if [ "${{ needs.upgrade-validation.result }}" = "success" ]; then
+          echo "✅ **Upgrade Validation:** PASSED" >> upgrade_summary.md
+        else
+          echo "❌ **Upgrade Validation:** FAILED" >> upgrade_summary.md
+        fi
+        
+        if [ "${{ needs.security-verification.result }}" = "success" ]; then
+          echo "✅ **Security Verification:** PASSED" >> upgrade_summary.md
+        elif [ "${{ needs.security-verification.result }}" = "skipped" ]; then
+          echo "⏭️ **Security Verification:** SKIPPED (no vulnerabilities)" >> upgrade_summary.md
+        else
+          echo "❌ **Security Verification:** FAILED" >> upgrade_summary.md
+        fi
+        
+        if [ "${{ needs.performance-analysis.result }}" = "success" ]; then
+          echo "✅ **Performance Analysis:** PASSED" >> upgrade_summary.md
+        else
+          echo "❌ **Performance Analysis:** FAILED" >> upgrade_summary.md
+        fi
+
+    - name: Upload comprehensive report
+      uses: actions/upload-artifact@v4
+      with:
+        name: comprehensive-upgrade-report
+        path: |
+          upgrade_validation_report.json
+          upgrade_summary.md
+          *.md
+
+    - name: Comment on PR (if applicable)
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          
+          try {
+            const summary = fs.readFileSync('upgrade_summary.md', 'utf8');
+            
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });
+          } catch (error) {
+            console.log('Could not create PR comment:', error);
+          }
+
+    - name: Set job status
+      run: |
+        if [ "${{ needs.upgrade-validation.result }}" != "success" ] || 
+           [ "${{ needs.security-verification.result }}" = "failure" ] || 
+           [ "${{ needs.performance-analysis.result }}" != "success" ]; then
+          echo "❌ Upgrade validation pipeline failed"
+          exit 1
+        else
+          echo "✅ Upgrade validation pipeline completed successfully"
+        fi

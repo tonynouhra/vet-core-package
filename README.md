@@ -366,6 +366,40 @@ make html
 python -m http.server 8000 -d _build/html/
 ```
 
+### Security Documentation
+
+The vet-core package includes comprehensive security documentation for managing dependency vulnerabilities and security incidents:
+
+#### Core Security Documents
+- **[Security Documentation Index](docs/SECURITY_DOCUMENTATION_INDEX.md)**: Central index for all security documentation
+- **[Security Processes](docs/SECURITY_PROCESSES.md)**: Comprehensive vulnerability management workflow and procedures
+- **[Security Runbooks](docs/SECURITY_RUNBOOKS.md)**: Operational runbooks for different vulnerability types
+- **[Rollback Procedures](docs/ROLLBACK_PROCEDURES.md)**: Emergency rollback and recovery procedures
+- **[Emergency Response Protocols](docs/EMERGENCY_RESPONSE_PROTOCOLS.md)**: Critical security incident response
+
+#### Quick Security Commands
+```bash
+# Daily security scan
+python scripts/security_scan.py --comprehensive --output daily-scan.json
+
+# Emergency vulnerability response
+python scripts/security_monitoring.py --declare-emergency --severity P0
+
+# Validate dependency upgrades
+python scripts/validate_upgrades.py --package package_name --version target_version
+
+# Generate security dashboard
+python scripts/vulnerability_dashboard.py --summary
+```
+
+#### Security Features
+- **Automated Vulnerability Scanning**: Daily pip-audit and safety scans
+- **Risk Assessment**: CVSS-based vulnerability prioritization
+- **Safe Upgrade Pipeline**: Automated testing and validation
+- **Emergency Response**: Structured incident response procedures
+- **Audit Trail**: Comprehensive security action logging
+- **Compliance Reporting**: Automated compliance and audit reports
+
 ## Migration Guide
 
 ### Database Migrations

@@ -1,0 +1,386 @@
+name: Security Monitoring
+
+on:
+  # Daily automated vulnerability scanning at 6 AM UTC
+  schedule:
+    - cron: '0 6 * * *'
+  
+  # Manual trigger for testing
+  workflow_dispatch:
+    inputs:
+      notify_on_findings:
+        description: 'Send notifications for findings'
+        required: false
+        default: 'true'
+        type: boolean
+  
+  # Trigger on security-related changes
+  push:
+    branches: [main, develop]
+    paths:
+      - 'pyproject.toml'
+      - 'requirements*.txt'
+      - 'setup.py'
+      - 'setup.cfg'
+      - '.github/workflows/security-monitoring.yml'
+
+env:
+  PYTHON_DEFAULT_VERSION: "3.11"
+
+jobs:
+  vulnerability-scan:
+    name: Daily Vulnerability Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_DEFAULT_VERSION }}
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+        pip install pip-audit
+
+    - name: Create security reports directory
+      run: |
+        mkdir -p security-reports
+        echo "REPORTS_DIR=security-reports" >> $GITHUB_ENV
+        echo "TIMESTAMP=$(date +%Y%m%d_%H%M%S)" >> $GITHUB_ENV
+
+    - name: Run pip-audit vulnerability scan
+      id: pip-audit
+      run: |
+        echo "Running pip-audit vulnerability scan..."
+        
+        # Run pip-audit with JSON output and descriptions
+        pip-audit --format=json --desc --output=${{ env.REPORTS_DIR }}/pip-audit-raw.json || echo "pip-audit completed with findings"
+        
+        # Also generate a simple text report for quick review
+        pip-audit --output=${{ env.REPORTS_DIR }}/pip-audit-summary.txt || echo "pip-audit text report generated"
+        
+        # Check if vulnerabilities were found
+        if [ -f "${{ env.REPORTS_DIR }}/pip-audit-raw.json" ]; then
+          VULN_COUNT=$(python .github/scripts/process_vulnerabilities.py count "${{ env.REPORTS_DIR }}/pip-audit-raw.json")
+          echo "VULNERABILITY_COUNT=$VULN_COUNT" >> $GITHUB_ENV
+          echo "Found $VULN_COUNT vulnerabilities"
+        else
+          echo "VULNERABILITY_COUNT=0" >> $GITHUB_ENV
+          echo "No vulnerabilities found"
+        fi
+
+    - name: Process vulnerability report with vet-core security tools
+      if: env.VULNERABILITY_COUNT != '0'
+      run: |
+        echo "Processing vulnerability report with vet-core security tools..."
+        
+        # Use the vet-core security scanner to process the raw pip-audit output
+        python .github/scripts/process_vulnerabilities.py process "${{ env.REPORTS_DIR }}" >> $GITHUB_ENV
+
+    - name: Create security alert summary
+      if: env.VULNERABILITY_COUNT != '0'
+      run: |
+        echo "Creating security alert summary..."
+        
+        # Create a GitHub Actions summary
+        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+        # 🚨 Security Vulnerability Alert
+        
+        **Scan Date:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+        **Total Vulnerabilities:** ${{ env.VULNERABILITY_COUNT }}
+        
+        ## Severity Breakdown
+        - **Critical:** ${{ env.CRITICAL_COUNT }}
+        - **High:** ${{ env.HIGH_COUNT }}
+        - **Medium:** ${{ env.MEDIUM_COUNT }}
+        - **Low:** ${{ env.LOW_COUNT }}
+        - **Fixable:** ${{ env.FIXABLE_COUNT }}
+        
+        ## Next Steps
+        1. Review the detailed security report in the artifacts
+        2. Prioritize critical and high severity vulnerabilities
+        3. Apply available fixes using the upgrade recommendations
+        4. Monitor for additional security updates
+        
+        ## Reports Generated
+        - `security-report.json` - Comprehensive JSON report with risk assessments
+        - `security-summary.md` - Human-readable markdown summary
+        - `security-report.csv` - Spreadsheet-compatible data export
+        - `pip-audit-raw.json` - Raw pip-audit output
+        EOF
+
+    - name: Upload security reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: security-reports-${{ env.TIMESTAMP }}
+        path: |
+          security-reports/
+        retention-days: 90
+
+    - name: Create GitHub Issue for Critical Vulnerabilities
+      if: env.NOTIFICATION_LEVEL == 'critical' && (github.event_name == 'schedule' || github.event.inputs.notify_on_findings == 'true')
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const path = require('path');
+          
+          // Read the security summary
+          let summaryContent = '';
+          try {
+            summaryContent = fs.readFileSync('security-reports/security-summary.md', 'utf8');
+          } catch (error) {
+            summaryContent = `# Critical Security Vulnerabilities Detected
+            
+            **Scan Date:** ${new Date().toISOString()}
+            **Total Vulnerabilities:** ${{ env.VULNERABILITY_COUNT }}
+            **Critical:** ${{ env.CRITICAL_COUNT }}
+            **High:** ${{ env.HIGH_COUNT }}
+            
+            Please check the security reports artifact for detailed information.`;
+          }
+          
+          // Create or update issue
+          const title = `🚨 Critical Security Vulnerabilities Detected - ${new Date().toISOString().split('T')[0]}`;
+          
+          const issueBody = `${summaryContent}
+          
+          ---
+          
+          **Automated Security Scan Results**
+          - **Workflow Run:** [${context.runId}](${context.payload.repository.html_url}/actions/runs/${context.runId})
+          - **Triggered by:** ${context.eventName}
+          - **Repository:** ${context.payload.repository.full_name}
+          
+          ## Immediate Actions Required
+          1. 🔍 Review the security reports in the workflow artifacts
+          2. 🚀 Apply critical security fixes immediately (within 24 hours)
+          3. 📋 Update this issue with remediation progress
+          4. ✅ Close this issue once all critical vulnerabilities are resolved
+          
+          ## Security Reports
+          Download the complete security reports from the [workflow artifacts](${context.payload.repository.html_url}/actions/runs/${context.runId}).
+          `;
+          
+          // Check for existing open security issues
+          const existingIssues = await github.rest.issues.listForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            labels: ['security', 'vulnerability', 'critical'],
+            state: 'open'
+          });
+          
+          if (existingIssues.data.length > 0) {
+            // Update existing issue
+            const issue = existingIssues.data[0];
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: `## 🔄 Updated Security Scan Results - ${new Date().toISOString().split('T')[0]}
+              
+              ${issueBody}`
+            });
+            
+            console.log(`Updated existing security issue #${issue.number}`);
+          } else {
+            // Create new issue
+            const newIssue = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: issueBody,
+              labels: ['security', 'vulnerability', 'critical', 'automated']
+            });
+            
+            console.log(`Created new security issue #${newIssue.data.number}`);
+          }
+
+    - name: Send Slack notification for high/critical vulnerabilities
+      if: (env.NOTIFICATION_LEVEL == 'critical' || env.NOTIFICATION_LEVEL == 'high') && (github.event_name == 'schedule' || github.event.inputs.notify_on_findings == 'true')
+      uses: 8398a7/action-slack@v3
+      with:
+        status: custom
+        custom_payload: |
+          {
+            "text": "🚨 Security Vulnerability Alert",
+            "attachments": [
+              {
+                "color": "${{ env.NOTIFICATION_LEVEL == 'critical' && 'danger' || 'warning' }}",
+                "fields": [
+                  {
+                    "title": "Repository",
+                    "value": "${{ github.repository }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Severity",
+                    "value": "${{ env.NOTIFICATION_LEVEL }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Total Vulnerabilities",
+                    "value": "${{ env.VULNERABILITY_COUNT }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Critical",
+                    "value": "${{ env.CRITICAL_COUNT }}",
+                    "short": true
+                  },
+                  {
+                    "title": "High",
+                    "value": "${{ env.HIGH_COUNT }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Fixable",
+                    "value": "${{ env.FIXABLE_COUNT }}",
+                    "short": true
+                  }
+                ],
+                "actions": [
+                  {
+                    "type": "button",
+                    "text": "View Workflow",
+                    "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  }
+                ]
+              }
+            ]
+          }
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      continue-on-error: true
+
+    - name: Post summary comment on PR
+      if: github.event_name == 'pull_request' && env.VULNERABILITY_COUNT != '0'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          
+          let summaryContent = '';
+          try {
+            summaryContent = fs.readFileSync('security-reports/security-summary.md', 'utf8');
+            // Truncate if too long for PR comment
+            if (summaryContent.length > 60000) {
+              summaryContent = summaryContent.substring(0, 60000) + '\n\n... (truncated, see full report in artifacts)';
+            }
+          } catch (error) {
+            summaryContent = `## Security Scan Results
+            
+            **Total Vulnerabilities:** ${{ env.VULNERABILITY_COUNT }}
+            **Critical:** ${{ env.CRITICAL_COUNT }}
+            **High:** ${{ env.HIGH_COUNT }}
+            **Medium:** ${{ env.MEDIUM_COUNT }}
+            **Low:** ${{ env.LOW_COUNT }}
+            
+            Please check the security reports artifact for detailed information.`;
+          }
+          
+          const comment = `## 🔒 Security Vulnerability Scan Results
+          
+          ${summaryContent}
+          
+          ---
+          
+          📋 **Full reports available in [workflow artifacts](${context.payload.repository.html_url}/actions/runs/${context.runId})**
+          
+          ${process.env.CRITICAL_COUNT > 0 ? '⚠️ **Critical vulnerabilities detected - immediate action required!**' : ''}
+          `;
+          
+          await github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+            body: comment
+          });
+
+  security-trend-analysis:
+    name: Security Trend Analysis
+    runs-on: ubuntu-latest
+    needs: vulnerability-scan
+    if: github.event_name == 'schedule'
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_DEFAULT_VERSION }}
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+
+    - name: Download recent security reports
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          
+          // Get recent workflow runs for security monitoring
+          const runs = await github.rest.actions.listWorkflowRuns({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: 'security-monitoring.yml',
+            status: 'completed',
+            per_page: 30
+          });
+          
+          console.log(`Found ${runs.data.workflow_runs.length} recent security monitoring runs`);
+          
+          // Create directory for historical reports
+          if (!fs.existsSync('historical-reports')) {
+            fs.mkdirSync('historical-reports');
+          }
+          
+          let downloadCount = 0;
+          for (const run of runs.data.workflow_runs.slice(0, 10)) {
+            try {
+              const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: run.id
+              });
+              
+              const securityArtifact = artifacts.data.artifacts.find(a => 
+                a.name.startsWith('security-reports-')
+              );
+              
+              if (securityArtifact) {
+                console.log(`Found security artifact for run ${run.id}: ${securityArtifact.name}`);
+                downloadCount++;
+              }
+            } catch (error) {
+              console.log(`Could not process run ${run.id}: ${error.message}`);
+            }
+          }
+          
+          console.log(`Successfully identified ${downloadCount} security report artifacts`);
+
+    - name: Generate trend analysis
+      run: |
+        echo "Generating security trend analysis..."
+        
+        # Generate trend analysis
+        python .github/scripts/generate_trend_analysis.py
+
+    - name: Upload trend analysis
+      uses: actions/upload-artifact@v4
+      with:
+        name: security-trend-analysis-${{ github.run_id }}
+        path: historical-reports/
+        retention-days: 365
