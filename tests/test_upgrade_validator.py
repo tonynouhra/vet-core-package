@@ -2,24 +2,25 @@
 Tests for the upgrade validation system.
 """
 
-import pytest
-import tempfile
 import shutil
 import subprocess
 import sys
-from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+import tempfile
 from datetime import datetime
+from pathlib import Path
+from unittest.mock import MagicMock, Mock, patch
 
+import pytest
+
+from vet_core.security.models import Vulnerability, VulnerabilitySeverity
 from vet_core.security.upgrade_validator import (
-    UpgradeValidator,
-    UpgradeResult,
-    EnvironmentBackup,
     DependencyConflictError,
+    EnvironmentBackup,
     TestFailureError,
+    UpgradeResult,
+    UpgradeValidator,
     validate_vulnerability_fixes,
 )
-from vet_core.security.models import Vulnerability, VulnerabilitySeverity
 
 
 class TestUpgradeResult:

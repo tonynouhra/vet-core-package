@@ -5,19 +5,20 @@ This module tests the comprehensive risk assessment and vulnerability
 prioritization functionality implemented in the assessor module.
 """
 
-import pytest
 from datetime import datetime, timedelta
 from unittest.mock import Mock, patch
 
+import pytest
+
 from vet_core.security.assessor import (
-    RiskAssessor,
-    RiskAssessment,
     PackageProfile,
+    RiskAssessment,
+    RiskAssessor,
 )
 from vet_core.security.models import (
+    SecurityReport,
     Vulnerability,
     VulnerabilitySeverity,
-    SecurityReport,
 )
 
 

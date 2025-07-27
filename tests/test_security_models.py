@@ -2,14 +2,16 @@
 Tests for security data models.
 """
 
-import pytest
 from datetime import datetime, timedelta
+
+import pytest
+
 from vet_core.security.models import (
-    Vulnerability,
-    VulnerabilitySeverity,
-    SecurityReport,
     RemediationAction,
     SecurityConfig,
+    SecurityReport,
+    Vulnerability,
+    VulnerabilitySeverity,
 )
 
 

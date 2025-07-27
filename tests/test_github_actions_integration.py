@@ -14,18 +14,19 @@ Requirements addressed:
 import json
 import os
 import tempfile
-import pytest
-import yaml
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, Mock, patch
 
-from vet_core.security.scanner import VulnerabilityScanner
+import pytest
+import yaml
+
 from vet_core.security.models import (
     SecurityReport,
     Vulnerability,
     VulnerabilitySeverity,
 )
+from vet_core.security.scanner import VulnerabilityScanner
 
 
 class TestGitHubActionsIntegration:

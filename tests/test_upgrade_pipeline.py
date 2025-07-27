@@ -12,18 +12,19 @@ import sys
 import tempfile
 import time
 from pathlib import Path
-from typing import Dict, List, Tuple, Any
-import pytest
-from unittest.mock import Mock, patch, MagicMock
+from typing import Any, Dict, List, Tuple
+from unittest.mock import MagicMock, Mock, patch
 
-from vet_core.security.upgrade_validator import (
-    UpgradeValidator,
-    UpgradeResult,
-    EnvironmentBackup,
-    DependencyConflictError,
-    TestFailureError,
-)
+import pytest
+
 from vet_core.security.models import Vulnerability, VulnerabilitySeverity
+from vet_core.security.upgrade_validator import (
+    DependencyConflictError,
+    EnvironmentBackup,
+    TestFailureError,
+    UpgradeResult,
+    UpgradeValidator,
+)
 
 
 class TestUpgradeValidationPipeline:
@@ -378,8 +379,9 @@ class TestPerformanceRegressionTesting:
 
     def test_memory_usage_measurement(self):
         """Test measurement of memory usage during upgrades."""
-        import psutil
         import os
+
+        import psutil
 
         process = psutil.Process(os.getpid())
         initial_memory = process.memory_info().rss / 1024 / 1024  # MB

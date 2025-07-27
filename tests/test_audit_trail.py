@@ -11,24 +11,25 @@ This module tests the comprehensive audit trail system including:
 import json
 import sqlite3
 import tempfile
-import pytest
 from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import Mock, patch
 
+import pytest
+
+from vet_core.security.assessor import RiskAssessment
 from vet_core.security.audit_trail import (
-    SecurityAuditTrail,
     AuditEvent,
     AuditEventType,
     ComplianceMetrics,
+    SecurityAuditTrail,
 )
 from vet_core.security.models import (
+    RemediationAction,
+    SecurityReport,
     Vulnerability,
     VulnerabilitySeverity,
-    SecurityReport,
-    RemediationAction,
 )
-from vet_core.security.assessor import RiskAssessment
 
 
 class TestSecurityAuditTrail:

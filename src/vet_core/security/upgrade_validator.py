@@ -20,7 +20,6 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from .models import RemediationAction, Vulnerability, VulnerabilitySeverity
 
-
 logger = logging.getLogger(__name__)
 
 

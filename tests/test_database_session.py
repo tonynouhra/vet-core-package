@@ -73,8 +73,8 @@ class TestSessionManager:
     @pytest.mark.asyncio
     async def test_get_transaction_context_manager(self):
         """Test get_transaction context manager."""
-        from unittest.mock import AsyncMock
         from contextlib import asynccontextmanager
+        from unittest.mock import AsyncMock
 
         mock_engine = Mock()
         manager = SessionManager(mock_engine)
