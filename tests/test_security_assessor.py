@@ -10,11 +10,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from vet_core.security.assessor import (
-    PackageProfile,
-    RiskAssessment,
-    RiskAssessor,
-)
+from vet_core.security.assessor import PackageProfile, RiskAssessment, RiskAssessor
 from vet_core.security.models import (
     SecurityReport,
     Vulnerability,
