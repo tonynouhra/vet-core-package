@@ -8,6 +8,7 @@ and test data management.
 
 import asyncio
 import os
+import tempfile
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
@@ -53,8 +54,6 @@ TEST_DATABASE_URL = os.getenv(
 
 # SQLite temporary file for fast tests (when PostgreSQL not available)
 # Using a temporary file allows tables created in one connection to be visible to others
-import tempfile
-import os
 
 TEMP_DB_FILE = os.path.join(tempfile.gettempdir(), "vet_core_test.db")
 SQLITE_TEST_URL = f"sqlite+aiosqlite:///{TEMP_DB_FILE}"

@@ -7,6 +7,7 @@ health checks, and database initialization/cleanup utilities.
 """
 
 import asyncio
+from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest

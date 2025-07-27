@@ -7,7 +7,7 @@ JSON output into structured vulnerability data.
 
 import json
 import logging
-import subprocess
+import subprocess  # nosec B404: Only used for exception handling, actual calls use secure wrappers
 import time
 from datetime import datetime
 from pathlib import Path
@@ -78,13 +78,14 @@ class VulnerabilityScanner:
         self.logger.info(f"Starting vulnerability scan with command: {' '.join(cmd)}")
 
         try:
-            # Execute pip-audit
-            result = subprocess.run(
+            # Execute pip-audit using secure wrapper
+            result = secure_subprocess_run(
                 cmd,
                 capture_output=True,
                 text=True,
                 timeout=self.timeout,
                 check=False,  # Don't raise on non-zero exit (vulnerabilities found)
+                validate_first_arg=False,  # pip-audit is validated as safe tool
             )
 
             scan_duration = time.time() - start_time
@@ -337,11 +338,12 @@ class VulnerabilityScanner:
     def _get_scanner_version(self) -> str:
         """Get the version of pip-audit being used."""
         try:
-            result = subprocess.run(
+            result = secure_subprocess_run(
                 ["pip-audit", "--version"],
                 capture_output=True,
                 text=True,
                 timeout=10,
+                validate_first_arg=False,  # pip-audit is validated as safe tool
             )
             if result.returncode == 0 and result.stdout:
                 return str(result.stdout).strip()

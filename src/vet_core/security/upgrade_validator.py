@@ -9,7 +9,7 @@ import json
 import logging
 import os
 import shutil
-import subprocess
+import subprocess  # nosec B404: Only used for exception handling, actual calls use secure wrappers
 import sys
 import tempfile
 import venv

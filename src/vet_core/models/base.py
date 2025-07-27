@@ -61,12 +61,37 @@ class GUID(TypeDecorator):
     cache_ok = True
 
     def load_dialect_impl(self, dialect: Dialect) -> TypeEngine[Any]:
+        """
+        Loads and returns an appropriate type implementation for the dialect,
+        based on the database in use. This method provides support for different
+        database systems by specifying the type descriptor accordingly.
+
+        Args:
+            dialect (Dialect): The SQL dialect being used.
+
+        Returns:
+            TypeEngine[Any]: A type engine specific to the provided dialect.
+        """
         if dialect.name == "postgresql":
             return dialect.type_descriptor(PostgresUUID(as_uuid=True))
         else:
             return dialect.type_descriptor(CHAR(36))
 
     def process_bind_param(self, value: Any, dialect: Dialect) -> Optional[str]:
+        """
+        Processes the parameter to be bound to a SQL query, converting it to a string
+        representation suitable for the specified SQL dialect. It ensures the parameter
+        is correctly formatted as a UUID or string, depending on the dialect and input.
+
+        Parameters:
+        value (Any): The value to process, which might be a UUID instance, a string
+                     representing a UUID, or None.
+        dialect (Dialect): The SQL dialect to which the processed value will be bound.
+
+        Returns:
+        Optional[str]: The processed string representation of the value if conversion
+                       occurs, or the value itself if no processing is required.
+        """
         if value is None:
             return value
         elif dialect.name == "postgresql":
@@ -78,6 +103,21 @@ class GUID(TypeDecorator):
                 return str(value)
 
     def process_result_value(self, value: Any, dialect: Dialect) -> Optional[uuid.UUID]:
+        """
+        Processes the result value retrieved from the database and ensures it is a valid UUID. If the value
+        is already a UUID, it will be returned as-is. If the value is None, it returns None. Otherwise, it
+        attempts to convert the value to a UUID.
+
+        Params:
+            value: Any
+                The value to be processed. This can be of any type.
+            dialect: Dialect
+                SQL dialect in use. Used here for method signature compatibility, but not actively utilized.
+
+        Returns:
+            Optional[uuid.UUID]: A UUID object if the value is valid and convertible, or None if the value
+            was None.
+        """
         if value is None:
             return value
         else:

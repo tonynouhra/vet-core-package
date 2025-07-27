@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 
 import pytest
 
+from src.vet_core.database import check_connection
 from vet_core.database.connection import (
     DatabaseConfig,
     close_engine,
@@ -15,8 +16,6 @@ from vet_core.database.connection import (
     wait_for_database,
 )
 from vet_core.exceptions import ConnectionException
-
-from src.vet_core.database import check_connection
 
 
 class TestDatabaseConfig:
