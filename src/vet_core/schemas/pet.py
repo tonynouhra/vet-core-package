@@ -44,11 +44,18 @@ class VaccinationRecordSchema(BaseModel):
             return v
 
         try:
-            # Validate ISO date format
-            datetime.fromisoformat(v.replace("Z", "+00:00"))
+            # Validate ISO datetime format - must include time component
+            parsed_date = datetime.fromisoformat(v.replace("Z", "+00:00"))
+            # Check that it's a full datetime format (has time component)
+            if "T" not in v:
+                raise ValueError(
+                    "Date must include time component (ISO datetime format)"
+                )
             return v
         except ValueError:
-            raise ValueError("Date must be in ISO format")
+            raise ValueError(
+                "Date must be in ISO datetime format (e.g., '2023-01-15T10:00:00')"
+            )
 
     @field_validator("veterinarian")
     @classmethod
@@ -316,14 +323,12 @@ class PetBase(BaseModel):
             if not v:
                 return None
 
-            # Microchip IDs are typically 15 digits, but can vary
-            if not re.match(r"^[0-9A-Fa-f]+$", v):
-                raise ValueError(
-                    "Microchip ID can only contain numbers and letters A-F"
-                )
+            # Microchip IDs are typically 15 alphanumeric characters
+            if not re.match(r"^[0-9A-Za-z]+$", v):
+                raise ValueError("Microchip ID can only contain numbers and letters")
 
-            if len(v) < 8 or len(v) > 20:
-                raise ValueError("Microchip ID must be between 8 and 20 characters")
+            if len(v) != 15:
+                raise ValueError("Microchip ID must be exactly 15 characters")
 
         return v
 
@@ -346,7 +351,14 @@ class PetBase(BaseModel):
     @model_validator(mode="after")
     def validate_species_other_consistency(self) -> "PetBase":
         """Validate that species 'other' has description."""
-        if self.species == PetSpecies.OTHER and not self.species_other_description:
+        # Handle both enum object and string value comparisons
+        species_value = (
+            self.species.value if isinstance(self.species, PetSpecies) else self.species
+        )
+        if (
+            species_value == PetSpecies.OTHER.value
+            and not self.species_other_description
+        ):
             raise ValueError(
                 "Species other description is required when species is 'other'"
             )
@@ -515,28 +527,82 @@ class PetUpdate(BaseModel):
         None, description="UUID of preferred clinic"
     )
 
-    # Use the same validators as PetBase for applicable fields
-    _validate_name = field_validator("name")(PetBase.validate_name)
-    _validate_species_other_description = field_validator("species_other_description")(
-        PetBase.validate_species_other_description
-    )
-    _validate_breed = field_validator("breed")(PetBase.validate_breed)
-    _validate_birth_date = field_validator("birth_date")(PetBase.validate_birth_date)
-    _validate_procedure_dates = field_validator("spay_neuter_date", "microchip_date")(
-        PetBase.validate_procedure_dates
-    )
-    _validate_microchip_id = field_validator("microchip_id")(
-        PetBase.validate_microchip_id
-    )
-    _validate_additional_photos = field_validator("additional_photos")(
-        PetBase.validate_additional_photos
-    )
-    _validate_vaccination_records = field_validator("vaccination_records")(
-        PetCreate.validate_vaccination_records
-    )
-    _validate_allergy_information = field_validator("allergy_information")(
-        PetCreate.validate_allergy_information
-    )
+    # Define validators directly for PetUpdate to avoid ValidationInfo issues
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, v: Optional[str]) -> Optional[str]:
+        """Validate pet name."""
+        if v is not None:
+            return PetBase.validate_name(v)
+        return v
+
+    @field_validator("species_other_description")
+    @classmethod
+    def validate_species_other_description(cls, v: Optional[str]) -> Optional[str]:
+        """Validate species other description."""
+        if v is not None:
+            return PetBase.validate_species_other_description(v)
+        return v
+
+    @field_validator("breed")
+    @classmethod
+    def validate_breed(cls, v: Optional[str]) -> Optional[str]:
+        """Validate breed."""
+        if v is not None:
+            return PetBase.validate_breed(v)
+        return v
+
+    @field_validator("birth_date")
+    @classmethod
+    def validate_birth_date(cls, v: Optional[date]) -> Optional[date]:
+        """Validate birth date."""
+        if v is not None:
+            return PetBase.validate_birth_date(v)
+        return v
+
+    @field_validator("spay_neuter_date", "microchip_date")
+    @classmethod
+    def validate_procedure_dates(cls, v: Optional[date]) -> Optional[date]:
+        """Validate procedure dates."""
+        if v is not None:
+            return PetBase.validate_procedure_dates(v)
+        return v
+
+    @field_validator("microchip_id")
+    @classmethod
+    def validate_microchip_id(cls, v: Optional[str]) -> Optional[str]:
+        """Validate microchip ID."""
+        if v is not None:
+            return PetBase.validate_microchip_id(v)
+        return v
+
+    @field_validator("additional_photos")
+    @classmethod
+    def validate_additional_photos(cls, v: Optional[List[str]]) -> Optional[List[str]]:
+        """Validate additional photos."""
+        if v is not None:
+            return PetBase.validate_additional_photos(v)
+        return v
+
+    @field_validator("vaccination_records")
+    @classmethod
+    def validate_vaccination_records(
+        cls, v: Optional[List[VaccinationRecordSchema]]
+    ) -> Optional[List[VaccinationRecordSchema]]:
+        """Validate vaccination records."""
+        if v is not None:
+            return PetCreate.validate_vaccination_records(v)
+        return v
+
+    @field_validator("allergy_information")
+    @classmethod
+    def validate_allergy_information(
+        cls, v: Optional[List[AllergySchema]]
+    ) -> Optional[List[AllergySchema]]:
+        """Validate allergy information."""
+        if v is not None:
+            return PetCreate.validate_allergy_information(v)
+        return v
 
     @model_validator(mode="after")
     def validate_at_least_one_field(self) -> "PetUpdate":
@@ -636,7 +702,7 @@ class PetResponse(BaseModel):
 class PetListResponse(BaseModel):
     """Schema for paginated pet list responses."""
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, use_enum_values=True)
 
     id: UUID = Field(..., description="Pet's unique identifier")
     owner_id: UUID = Field(..., description="Owner's unique identifier")

@@ -516,37 +516,39 @@ class Pet(BaseModel):
             return True
 
         # Find the most recent vaccination of this type
-        latest_vaccination = None
+        latest_vaccination_date = None
         for record in self.vaccination_records:
             if record.get("vaccine_type") == vaccine_type:
-                vaccination_date = record.get("date")
-                if vaccination_date:
-                    if (
-                        latest_vaccination is None
-                        or vaccination_date > latest_vaccination
-                    ):
-                        latest_vaccination = vaccination_date
+                vaccination_date_str = record.get("date")
+                if vaccination_date_str:
+                    try:
+                        # Parse the date string to a date object for proper comparison
+                        vaccination_date = datetime.fromisoformat(
+                            vaccination_date_str
+                        ).date()
+                        if (
+                            latest_vaccination_date is None
+                            or vaccination_date > latest_vaccination_date
+                        ):
+                            latest_vaccination_date = vaccination_date
+                    except (ValueError, TypeError):
+                        continue
 
-        if not latest_vaccination:
+        if not latest_vaccination_date:
             return True
 
         # Check if vaccination is due based on type and species
         # This is a simplified check - in practice, you'd have more complex logic
-        try:
-            last_vaccination = datetime.fromisoformat(latest_vaccination).date()
-            today = date.today()
-            days_since = (today - last_vaccination).days
+        today = date.today()
+        days_since = (today - latest_vaccination_date).days
 
-            # Basic vaccination schedules (simplified)
-            if vaccine_type.lower() in ["rabies"]:
-                return days_since > 365  # Annual
-            elif vaccine_type.lower() in ["dhpp", "fvrcp"]:
-                return days_since > 365  # Annual
-            else:
-                return days_since > 365  # Default to annual
-
-        except (ValueError, TypeError):
-            return True
+        # Basic vaccination schedules (simplified)
+        if vaccine_type.lower() in ["rabies"]:
+            return days_since > 365  # Annual
+        elif vaccine_type.lower() in ["dhpp", "fvrcp"]:
+            return days_since > 365  # Annual
+        else:
+            return days_since > 365  # Default to annual
 
     def add_vaccination_record(
         self,
@@ -573,10 +575,16 @@ class Pet(BaseModel):
 
         record = {
             "vaccine_type": vaccine_type,
-            "date": date_administered.isoformat(),
+            "date": datetime.combine(
+                date_administered, datetime.min.time()
+            ).isoformat(),
             "veterinarian": veterinarian,
             "batch_number": batch_number,
-            "next_due_date": next_due_date.isoformat() if next_due_date else None,
+            "next_due_date": (
+                datetime.combine(next_due_date, datetime.min.time()).isoformat()
+                if next_due_date
+                else None
+            ),
             "notes": notes,
             "recorded_at": datetime.utcnow().isoformat(),
         }
@@ -663,7 +671,11 @@ class Pet(BaseModel):
             recorded_by: Who recorded the weight
         """
         # Store previous weight in medical history
-        if self.weight_kg and self.medical_history:
+        if self.weight_kg:
+            # Initialize medical_history if it's None or empty
+            if self.medical_history is None:
+                self.medical_history = {}
+
             if "weight_history" not in self.medical_history:
                 self.medical_history["weight_history"] = []
 

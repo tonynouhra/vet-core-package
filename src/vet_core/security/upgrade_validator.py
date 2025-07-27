@@ -9,6 +9,7 @@ import json
 import logging
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import venv
@@ -207,22 +208,32 @@ class UpgradeValidator:
                 shutil.copy2(backup.pyproject_backup, self.pyproject_path)
 
             # Reinstall packages from requirements
+            # Use --force-reinstall to handle potential conflicts during restoration
             # nosec B603: Using secure subprocess wrapper with validation
-            secure_subprocess_run(
+            result = secure_subprocess_run(
                 [
                     sys.executable,
                     "-m",
                     "pip",
                     "install",
+                    "--force-reinstall",
+                    "--no-deps",
                     "-r",
                     str(backup.requirements_file),
                 ],
                 validate_first_arg=False,  # sys.executable is trusted
-                check=True,
+                check=False,  # Don't raise exception on non-zero exit
             )
 
-            logger.info("Environment successfully restored from backup")
-            return True
+            if result.returncode == 0:
+                logger.info("Environment successfully restored from backup")
+                return True
+            else:
+                logger.error(
+                    f"Failed to restore environment: pip install returned {result.returncode}"
+                )
+                logger.error(f"stderr: {result.stderr}")
+                return False
 
         except Exception as e:
             logger.error(f"Failed to restore environment: {e}")
@@ -365,14 +376,15 @@ class UpgradeValidator:
             line = line.strip()
 
             # Look for summary line like "= 25 passed, 2 failed, 1 error in 10.23s ="
+            # or "= 5 passed in 2.34s ="
             if " passed" in line and " in " in line and line.startswith("="):
                 parts = line.split()
                 for i, part in enumerate(parts):
-                    if part == "passed,":
+                    if part == "passed," or part == "passed":
                         test_results["test_count"] = int(parts[i - 1])
-                    elif part == "failed,":
+                    elif part == "failed," or part == "failed":
                         test_results["failures"] = int(parts[i - 1])
-                    elif part == "error":
+                    elif part == "error," or part == "error":
                         test_results["errors"] = int(parts[i - 1])
                 break
 
@@ -446,7 +458,7 @@ class UpgradeValidator:
             # Perform the upgrade
             try:
                 # nosec B603: Using secure subprocess wrapper with validation
-                secure_subprocess_run(
+                result = secure_subprocess_run(
                     [
                         sys.executable,
                         "-m",
@@ -455,8 +467,23 @@ class UpgradeValidator:
                         f"{validated_package_name}=={validated_target_version}",
                     ],
                     validate_first_arg=False,  # sys.executable is trusted
-                    check=True,
+                    check=False,  # Don't raise exception, check return code manually
                 )
+
+                if result.returncode != 0:
+                    error_message = f"Failed to install package: pip install returned {result.returncode}"
+                    if result.stderr:
+                        error_message = f"Failed to install package: {result.stderr}"
+
+                    return UpgradeResult.failure_result(
+                        package_name=package_name,
+                        from_version=current_version,
+                        to_version=target_version,
+                        error_message=error_message,
+                        validation_duration=(
+                            datetime.now() - start_time
+                        ).total_seconds(),
+                    )
 
                 logger.info(f"Successfully installed {package_name}=={target_version}")
 
@@ -499,6 +526,23 @@ class UpgradeValidator:
                 from_version=current_version,
                 to_version=target_version,
                 test_results=test_results,
+                validation_duration=(datetime.now() - start_time).total_seconds(),
+            )
+
+        except subprocess.CalledProcessError as e:
+            # Handle subprocess errors specifically (e.g., pip install failures)
+            if backup:
+                rollback_performed = self.restore_environment(backup)
+
+            error_message = f"Failed to install package: {e}"
+            return UpgradeResult.failure_result(
+                package_name=package_name,
+                from_version=(
+                    current_version if "current_version" in locals() else "unknown"
+                ),
+                to_version=target_version,
+                error_message=error_message,
+                rollback_performed=rollback_performed,
                 validation_duration=(datetime.now() - start_time).total_seconds(),
             )
 

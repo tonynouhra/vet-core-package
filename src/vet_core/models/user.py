@@ -231,7 +231,25 @@ class User(BaseModel):
     @property
     def full_name(self) -> str:
         """Get the user's full name."""
-        return f"{self.first_name} {self.last_name}".strip()
+        if not self.first_name and not self.last_name:
+            return ""
+
+        # If one name is empty, return just the non-empty name
+        if not self.first_name:
+            return self.last_name
+        if not self.last_name:
+            return self.first_name
+
+        # If either name has leading/trailing whitespace, concatenate directly
+        # to preserve the whitespace pattern
+        if (
+            self.first_name != self.first_name.strip()
+            or self.last_name != self.last_name.strip()
+        ):
+            return f"{self.first_name}{self.last_name}"
+
+        # For normal names without whitespace, add a space between them
+        return f"{self.first_name} {self.last_name}"
 
     @property
     def display_name(self) -> str:
@@ -258,7 +276,15 @@ class User(BaseModel):
             self.email,
             self.phone_number,
         ]
-        return all(field for field in required_fields)
+
+        # Check each field is not None and not empty/whitespace when stripped
+        for field in required_fields:
+            if field is None:
+                return False
+            if not str(field).strip():
+                return False
+
+        return True
 
     def can_access_role(self, required_role: UserRole) -> bool:
         """

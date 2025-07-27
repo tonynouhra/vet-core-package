@@ -51,8 +51,13 @@ TEST_DATABASE_URL = os.getenv(
     "postgresql+asyncpg://postgres:postgres@localhost:5432/vet_core_test",
 )
 
-# In-memory SQLite for fast tests (when PostgreSQL not available)
-SQLITE_TEST_URL = "sqlite+aiosqlite:///:memory:"
+# SQLite temporary file for fast tests (when PostgreSQL not available)
+# Using a temporary file allows tables created in one connection to be visible to others
+import tempfile
+import os
+
+TEMP_DB_FILE = os.path.join(tempfile.gettempdir(), "vet_core_test.db")
+SQLITE_TEST_URL = f"sqlite+aiosqlite:///{TEMP_DB_FILE}"
 
 
 @pytest.fixture(scope="session")
@@ -112,7 +117,9 @@ async def test_session_manager(
     session_manager = SessionManager(test_engine)
 
     # Initialize database schema
-    async with test_engine.begin() as conn:
+    # For SQLite in-memory databases, we need to create tables outside of a transaction
+    # to ensure they persist and are visible to all connections
+    async with test_engine.connect() as conn:
         try:
             print(
                 f"Creating tables for {len(Base.metadata.tables)} registered tables..."
@@ -120,6 +127,7 @@ async def test_session_manager(
             for table_name in Base.metadata.tables.keys():
                 print(f"  - {table_name}")
             await conn.run_sync(Base.metadata.create_all)
+            await conn.commit()  # Ensure tables are committed
             print("Tables created successfully!")
 
             # Verify tables were created
@@ -136,6 +144,13 @@ async def test_session_manager(
 
     # Cleanup
     await session_manager.close_all_sessions()
+
+    # Remove temporary database file if it exists
+    if os.path.exists(TEMP_DB_FILE):
+        try:
+            os.remove(TEMP_DB_FILE)
+        except Exception:
+            pass  # Ignore cleanup errors
 
 
 @pytest_asyncio.fixture

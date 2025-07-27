@@ -164,7 +164,7 @@ def create_engine(
         raise
 
 
-async def test_connection(
+async def check_connection(
     engine: AsyncEngine, max_retries: int = 3, retry_delay: float = 1.0
 ) -> bool:
     """
@@ -232,7 +232,7 @@ async def wait_for_database(
     start_time = time.time()
 
     while time.time() - start_time < timeout:
-        if await test_connection(engine, max_retries=0):
+        if await check_connection(engine, max_retries=0):
             return True
         await asyncio.sleep(check_interval)
 
@@ -389,3 +389,7 @@ def get_database_url(
         base_url += f"?{params}"
 
     return base_url
+
+
+# Alias for backward compatibility
+# test_connection = check_connection

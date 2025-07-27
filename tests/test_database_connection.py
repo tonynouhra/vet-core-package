@@ -12,10 +12,11 @@ from vet_core.database.connection import (
     close_engine,
     create_engine,
     get_database_url,
-    test_connection,
     wait_for_database,
 )
 from vet_core.exceptions import ConnectionException
+
+from src.vet_core.database import check_connection
 
 
 class TestDatabaseConfig:
@@ -157,9 +158,11 @@ class TestConnectionTesting:
         """Test successful connection test."""
         mock_engine = Mock()
         mock_conn = AsyncMock()
-        mock_engine.begin.return_value.__aenter__.return_value = mock_conn
+        mock_context_manager = AsyncMock()
+        mock_context_manager.__aenter__.return_value = mock_conn
+        mock_engine.begin.return_value = mock_context_manager
 
-        result = await test_connection(mock_engine, max_retries=0)
+        result = await check_connection(mock_engine, max_retries=0)
 
         assert result is True
         mock_conn.execute.assert_called_once()
@@ -170,7 +173,7 @@ class TestConnectionTesting:
         mock_engine = Mock()
         mock_engine.begin.side_effect = Exception("Connection failed")
 
-        result = await test_connection(mock_engine, max_retries=0)
+        result = await check_connection(mock_engine, max_retries=0)
 
         assert result is False
 
@@ -185,7 +188,7 @@ class TestConnectionTesting:
         ]
 
         with patch("asyncio.sleep", new_callable=AsyncMock):
-            result = await test_connection(mock_engine, max_retries=1, retry_delay=0.1)
+            result = await check_connection(mock_engine, max_retries=1, retry_delay=0.1)
 
         assert result is True
         assert mock_engine.begin.call_count == 2
@@ -195,7 +198,7 @@ class TestConnectionTesting:
         """Test wait_for_database with successful connection."""
         mock_engine = Mock()
 
-        with patch("vet_core.database.connection.test_connection", return_value=True):
+        with patch("vet_core.database.connection.check_connection", return_value=True):
             result = await wait_for_database(
                 mock_engine, timeout=1.0, check_interval=0.1
             )
@@ -207,7 +210,7 @@ class TestConnectionTesting:
         """Test wait_for_database with timeout."""
         mock_engine = Mock()
 
-        with patch("vet_core.database.connection.test_connection", return_value=False):
+        with patch("vet_core.database.connection.check_connection", return_value=False):
             with pytest.raises(ConnectionException):
                 await wait_for_database(mock_engine, timeout=0.1, check_interval=0.05)
 

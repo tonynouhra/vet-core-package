@@ -91,10 +91,11 @@ class TestSessionManager:
 
     async def test_create_session(self, session_manager):
         """Test session creation."""
-        with patch.object(session_manager.session_factory, "__call__") as mock_factory:
-            mock_session = AsyncMock()
-            mock_factory.return_value = mock_session
+        mock_session = AsyncMock()
 
+        with patch.object(
+            session_manager, "session_factory", return_value=mock_session
+        ) as mock_factory:
             session = await session_manager.create_session()
             assert session == mock_session
             mock_factory.assert_called_once()
@@ -123,9 +124,18 @@ class TestSessionManager:
 
     async def test_get_transaction_context_manager(self, session_manager):
         """Test transaction context manager."""
+        from unittest.mock import AsyncMock
+        from contextlib import asynccontextmanager
+
         mock_session = AsyncMock()
         mock_transaction = AsyncMock()
-        mock_session.begin.return_value.__aenter__.return_value = mock_transaction
+
+        # Create a proper async context manager mock
+        @asynccontextmanager
+        async def mock_begin():
+            yield mock_transaction
+
+        mock_session.begin = mock_begin
 
         with patch.object(session_manager, "get_session") as mock_get_session:
             mock_get_session.return_value.__aenter__.return_value = mock_session
@@ -202,15 +212,20 @@ class TestSessionManager:
 
     async def test_initialize_database_success(self, session_manager, test_metadata):
         """Test successful database initialization."""
+        from contextlib import asynccontextmanager
+
         mock_session = AsyncMock()
         mock_conn = AsyncMock()
 
         with patch.object(session_manager, "health_check") as mock_health:
             mock_health.return_value = {"status": "healthy"}
 
-            with patch.object(session_manager.engine, "begin") as mock_begin:
-                mock_begin.return_value.__aenter__.return_value = mock_conn
+            # Create a proper async context manager mock for engine.begin()
+            @asynccontextmanager
+            async def mock_begin():
+                yield mock_conn
 
+            with patch.object(session_manager.engine, "begin", mock_begin):
                 with patch.object(session_manager, "get_session") as mock_get_session:
                     mock_get_session.return_value.__aenter__.return_value = mock_session
 
@@ -232,11 +247,16 @@ class TestSessionManager:
 
     async def test_cleanup_database(self, session_manager, test_metadata):
         """Test database cleanup."""
+        from contextlib import asynccontextmanager
+
         mock_conn = AsyncMock()
 
-        with patch.object(session_manager.engine, "begin") as mock_begin:
-            mock_begin.return_value.__aenter__.return_value = mock_conn
+        # Create a proper async context manager mock for engine.begin()
+        @asynccontextmanager
+        async def mock_begin():
+            yield mock_conn
 
+        with patch.object(session_manager.engine, "begin", mock_begin):
             with patch.object(session_manager, "close_all_sessions") as mock_close:
                 result = await session_manager.cleanup_database(
                     test_metadata, drop_all=True
@@ -302,15 +322,26 @@ class TestSessionManager:
 
     async def test_get_pool_status(self, session_manager):
         """Test getting pool status information."""
-        status = await session_manager.get_pool_status()
+        # Mock the engine URL to have a password that can be masked
+        mock_url = MagicMock()
+        mock_url.password = "secret_password"
+        mock_url.__str__ = MagicMock(
+            return_value="postgresql://user:secret_password@localhost:5432/testdb"
+        )
 
-        assert "pool_class" in status
-        assert "url" in status
-        assert "size" in status
-        assert "checked_in" in status
-        assert "checked_out" in status
-        assert status["pool_class"] == "QueuePool"
-        assert "***" in status["url"]  # Password should be masked
+        with patch.object(session_manager.engine, "url", mock_url):
+            status = await session_manager.get_pool_status()
+
+            assert "pool_class" in status
+            assert "url" in status
+            assert "size" in status
+            assert "checked_in" in status
+            assert "checked_out" in status
+            assert status["pool_class"] == "QueuePool"
+            assert "***" in status["url"]  # Password should be masked
+            assert (
+                "secret_password" not in status["url"]
+            )  # Original password should not be visible
 
 
 class TestGlobalSessionManager:

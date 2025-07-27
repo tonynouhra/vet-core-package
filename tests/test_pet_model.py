@@ -100,8 +100,8 @@ class TestPetModel:
         pet_data["special_needs"] = "Needs daily medication"
 
         pet = Pet(**pet_data)
-        async_async_session.add(pet)
-        async_async_session.commit()
+        async_session.add(pet)
+        async_session.commit()
 
         assert pet.name == "Buddy"
         assert pet.species == PetSpecies.DOG
@@ -128,8 +128,8 @@ class TestPetModel:
             birth_date=birth_date,
         )
 
-        async_async_session.add(pet)
-        async_async_session.commit()
+        async_session.add(pet)
+        async_session.commit()
 
         age = pet.age_in_years
         assert age == 2 or age == 1  # Account for leap years and exact dates
@@ -145,8 +145,8 @@ class TestPetModel:
             approximate_age_months=6,
         )
 
-        async_async_session.add(pet)
-        async_async_session.commit()
+        async_session.add(pet)
+        async_session.commit()
 
         assert pet.age_in_years == 3
         assert "3 year" in pet.age_display
@@ -163,8 +163,8 @@ class TestPetModel:
             birth_date=birth_date,
         )
 
-        async_async_session.add(pet)
-        async_async_session.commit()
+        async_session.add(pet)
+        async_session.commit()
 
         age_display = pet.age_display
         assert "month" in age_display

@@ -17,7 +17,7 @@ from typing import Any, Dict, Optional
 # Add the src directory to the path so we can import vet_core
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from vet_core.database.connection import close_engine, create_engine, test_connection
+from vet_core.database.connection import close_engine, create_engine, check_connection
 from vet_core.database.migrations import MigrationManager, run_migrations_async
 from vet_core.exceptions import DatabaseException, MigrationException
 from vet_core.utils.config import EnvironmentConfig
@@ -75,7 +75,7 @@ class MigrationTester:
         )
 
         # Test connection
-        if not await test_connection(self.engine):
+        if not await check_connection(self.engine):
             raise DatabaseException("Could not connect to test database")
 
         # Create migration manager

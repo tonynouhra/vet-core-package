@@ -7,6 +7,7 @@ JSON output into structured vulnerability data.
 
 import json
 import logging
+import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
@@ -77,11 +78,11 @@ class VulnerabilityScanner:
         self.logger.info(f"Starting vulnerability scan with command: {' '.join(cmd)}")
 
         try:
-            # Execute pip-audit with secure subprocess wrapper
-            # nosec B603: Using secure subprocess wrapper with validation
-            result = secure_subprocess_run(
+            # Execute pip-audit
+            result = subprocess.run(
                 cmd,
-                validate_first_arg=True,  # Validate pip-audit executable path
+                capture_output=True,
+                text=True,
                 timeout=self.timeout,
                 check=False,  # Don't raise on non-zero exit (vulnerabilities found)
             )
@@ -114,10 +115,17 @@ class VulnerabilityScanner:
             # Get pip-audit version
             scanner_version = self._get_scanner_version()
 
-            # Parse vulnerabilities from the new format
-            vulnerabilities = self._parse_vulnerabilities_from_dependencies(
-                scan_data.get("dependencies", [])
-            )
+            # Parse vulnerabilities - handle both old and new formats
+            if "vulnerabilities" in scan_data:
+                # Old format with direct vulnerabilities list
+                vulnerabilities = self._parse_vulnerabilities(
+                    scan_data["vulnerabilities"]
+                )
+            else:
+                # New format with dependencies list
+                vulnerabilities = self._parse_vulnerabilities_from_dependencies(
+                    scan_data.get("dependencies", [])
+                )
 
             # Create security report
             report = SecurityReport(
@@ -136,19 +144,18 @@ class VulnerabilityScanner:
 
             return report
 
+        except subprocess.TimeoutExpired:
+            error_msg = f"Scan timed out after {self.timeout} seconds"
+            self.logger.error(error_msg)
+            raise ScanTimeoutError(error_msg)
         except json.JSONDecodeError as e:
             error_msg = f"Failed to parse pip-audit JSON output: {e}"
             self.logger.error(error_msg)
             raise ScannerError(error_msg)
         except Exception as e:
-            if "timeout" in str(e).lower():
-                error_msg = f"Scan timed out after {self.timeout} seconds"
-                self.logger.error(error_msg)
-                raise ScanTimeoutError(error_msg)
-            else:
-                error_msg = f"Unexpected error during scan: {e}"
-                self.logger.error(error_msg)
-                raise ScannerError(error_msg)
+            error_msg = f"Unexpected error during scan: {e}"
+            self.logger.error(error_msg)
+            raise ScannerError(error_msg)
 
     def scan_from_file(self, json_file: Path) -> SecurityReport:
         """
@@ -272,6 +279,13 @@ class VulnerabilityScanner:
                 fix_versions = vuln.get("fix_versions", [])
                 description = vuln.get("description", "")
 
+                # Skip entries missing required fields
+                if not vuln_id or not package_name:
+                    self.logger.warning(
+                        f"Skipping vulnerability entry missing required fields: {vuln}"
+                    )
+                    continue
+
                 # Parse severity and CVSS score
                 cvss_score = None
                 severity = VulnerabilitySeverity.UNKNOWN
@@ -323,18 +337,14 @@ class VulnerabilityScanner:
     def _get_scanner_version(self) -> str:
         """Get the version of pip-audit being used."""
         try:
-            # nosec B603: Using secure subprocess wrapper with validation
-            result = secure_subprocess_run(
+            result = subprocess.run(
                 ["pip-audit", "--version"],
-                validate_first_arg=True,  # Validate pip-audit executable path
+                capture_output=True,
+                text=True,
                 timeout=10,
             )
             if result.returncode == 0 and result.stdout:
                 return str(result.stdout).strip()
-        except SubprocessSecurityError as e:
-            self.logger.warning(
-                f"Security validation failed for pip-audit version check: {e}"
-            )
         except Exception as e:
             self.logger.warning(f"Could not determine pip-audit version: {e}")
 

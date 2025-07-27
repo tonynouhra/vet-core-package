@@ -37,9 +37,11 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict, Optional, TypeVar, cast
 
-from sqlalchemy import Boolean, DateTime, text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Boolean, DateTime, String, text
+from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
+from sqlalchemy.engine import Dialect
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.types import TypeDecorator, TypeEngine, CHAR
 from sqlalchemy.sql import func
 from sqlalchemy.sql.elements import ColumnElement
 
@@ -47,20 +49,57 @@ from sqlalchemy.sql.elements import ColumnElement
 T = TypeVar("T", bound="BaseModel")
 
 
+class GUID(TypeDecorator):
+    """
+    Platform-independent GUID type.
+
+    Uses PostgreSQL's UUID type when available, otherwise uses CHAR(36)
+    for SQLite and other databases.
+    """
+
+    impl = CHAR
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect: Dialect) -> TypeEngine[Any]:
+        if dialect.name == "postgresql":
+            return dialect.type_descriptor(PostgresUUID(as_uuid=True))
+        else:
+            return dialect.type_descriptor(CHAR(36))
+
+    def process_bind_param(self, value: Any, dialect: Dialect) -> Optional[str]:
+        if value is None:
+            return value
+        elif dialect.name == "postgresql":
+            return str(value)
+        else:
+            if not isinstance(value, uuid.UUID):
+                return str(uuid.UUID(value))
+            else:
+                return str(value)
+
+    def process_result_value(self, value: Any, dialect: Dialect) -> Optional[uuid.UUID]:
+        if value is None:
+            return value
+        else:
+            if not isinstance(value, uuid.UUID):
+                return uuid.UUID(value)
+            return value
+
+
 class Base(DeclarativeBase):
     """
     Base declarative class for all SQLAlchemy models.
 
-    Configures the SQLAlchemy declarative base with PostgreSQL-specific
+    Configures the SQLAlchemy declarative base with cross-database
     type mappings, particularly for UUID fields.
 
     Attributes:
         type_annotation_map: Maps Python types to SQLAlchemy column types
     """
 
-    # Use UUID type for PostgreSQL with automatic UUID generation
+    # Use cross-database compatible UUID type
     type_annotation_map = {
-        uuid.UUID: UUID(as_uuid=True),
+        uuid.UUID: GUID(),
     }
 
 
@@ -121,10 +160,9 @@ class BaseModel(Base):
 
     # Primary key - UUID for distributed systems
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        GUID(),
         primary_key=True,
         default=uuid.uuid4,
-        server_default=text("gen_random_uuid()"),
     )
 
     # Audit fields
@@ -142,12 +180,12 @@ class BaseModel(Base):
     )
 
     created_by: Mapped[Optional[uuid.UUID]] = mapped_column(
-        UUID(as_uuid=True),
+        GUID(),
         nullable=True,
     )
 
     updated_by: Mapped[Optional[uuid.UUID]] = mapped_column(
-        UUID(as_uuid=True),
+        GUID(),
         nullable=True,
     )
 

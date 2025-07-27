@@ -118,14 +118,34 @@ class UserBase(BaseModel):
         if not v or not v.strip():
             raise ValueError("Name cannot be empty")
 
-        # Check for valid characters (letters, spaces, hyphens, apostrophes)
-        if not re.match(r"^[a-zA-Z\s\-']+$", v):
+        # Check for valid characters (letters, spaces, hyphens, apostrophes, periods)
+        if not re.match(r"^[a-zA-Z\s\-'.]+$", v):
             raise ValueError(
-                "Name can only contain letters, spaces, hyphens, and apostrophes"
+                "Name can only contain letters, spaces, hyphens, apostrophes, and periods"
             )
 
-        # Capitalize first letter of each word
-        return " ".join(word.capitalize() for word in v.split())
+        # Capitalize first letter of each word, handling spaces, hyphens, and apostrophes
+        def capitalize_parts(text: str) -> str:
+            # Split on spaces first
+            space_parts = text.split(" ")
+            result = []
+            for space_part in space_parts:
+                # Split each space part on hyphens and capitalize each part
+                hyphen_parts = space_part.split("-")
+                capitalized_hyphen_parts = []
+                for hyphen_part in hyphen_parts:
+                    # Split each hyphen part on apostrophes and capitalize each part
+                    apostrophe_parts = hyphen_part.split("'")
+                    capitalized_apostrophe_parts = [
+                        part.capitalize() for part in apostrophe_parts
+                    ]
+                    capitalized_hyphen_parts.append(
+                        "'".join(capitalized_apostrophe_parts)
+                    )
+                result.append("-".join(capitalized_hyphen_parts))
+            return " ".join(result)
+
+        return capitalize_parts(v)
 
     @field_validator("postal_code")
     @classmethod
@@ -290,19 +310,37 @@ class UserUpdate(BaseModel):
     )
 
     # Use the same validators as UserBase for applicable fields
-    _validate_phone_number = field_validator("phone_number")(
-        UserBase.validate_phone_number
-    )
-    _validate_name_fields = field_validator("first_name", "last_name")(
-        UserBase.validate_name_fields
-    )
-    _validate_postal_code = field_validator("postal_code")(
-        UserBase.validate_postal_code
-    )
-    _validate_country = field_validator("country")(UserBase.validate_country)
-    _validate_preferences = field_validator("preferences")(
-        UserCreate.validate_preferences
-    )
+    @field_validator("phone_number")
+    @classmethod
+    def validate_phone_number(cls, v: Optional[str]) -> Optional[str]:
+        """Validate phone number format."""
+        return UserBase.validate_phone_number(v)
+
+    @field_validator("first_name", "last_name")
+    @classmethod
+    def validate_name_fields(cls, v: str) -> str:
+        """Validate name fields."""
+        return UserBase.validate_name_fields(v)
+
+    @field_validator("postal_code")
+    @classmethod
+    def validate_postal_code(cls, v: Optional[str]) -> Optional[str]:
+        """Validate postal code format."""
+        return UserBase.validate_postal_code(v)
+
+    @field_validator("country")
+    @classmethod
+    def validate_country(cls, v: Optional[str]) -> Optional[str]:
+        """Validate country code."""
+        return UserBase.validate_country(v)
+
+    @field_validator("preferences")
+    @classmethod
+    def validate_preferences(
+        cls, v: Optional[Dict[str, Any]]
+    ) -> Optional[Dict[str, Any]]:
+        """Validate user preferences."""
+        return UserCreate.validate_preferences(v)
 
     @model_validator(mode="after")
     def validate_at_least_one_field(self) -> "UserUpdate":
@@ -333,10 +371,9 @@ class UserResponse(BaseModel):
 
     model_config = ConfigDict(
         from_attributes=True,
-        use_enum_values=True,
     )
 
-    id: UUID = Field(..., description="User's unique identifier")
+    id: str = Field(..., description="User's unique identifier")
     email: str = Field(..., description="User's email address")
     first_name: str = Field(..., description="User's first name")
     last_name: str = Field(..., description="User's last name")
@@ -377,7 +414,7 @@ class UserListResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-    id: UUID = Field(..., description="User's unique identifier")
+    id: str = Field(..., description="User's unique identifier")
     email: str = Field(..., description="User's email address")
     first_name: str = Field(..., description="User's first name")
     last_name: str = Field(..., description="User's last name")

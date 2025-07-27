@@ -187,10 +187,15 @@ def test_imports():
             with patch.object(
                 upgrade_validator, "run_tests", return_value={"success": True}
             ):
-                with patch("subprocess.run") as mock_run:
-                    # Mock pip show for current version
+                with patch(
+                    "vet_core.security.upgrade_validator.secure_subprocess_run"
+                ) as mock_run:
+                    # Mock all subprocess calls in correct order: pip show, pip freeze (backup), pip install
                     mock_run.side_effect = [
                         Mock(returncode=0, stdout="Version: 2.25.0\n"),  # pip show
+                        Mock(
+                            returncode=0, stdout="requests==2.25.0\nclick==8.0.0\n"
+                        ),  # pip freeze for backup
                         Mock(returncode=0, stdout="", stderr=""),  # pip install
                     ]
 
@@ -449,7 +454,9 @@ Location: /path/to/package
         assert len(regressions) == 4
 
         for regression in regressions:
-            assert regression["increase"] == 50.0
+            assert (
+                abs(regression["increase"] - 50.0) < 0.001
+            )  # Use tolerance for floating point comparison
 
 
 class TestMultiPythonVersionTesting:
@@ -547,11 +554,17 @@ dependencies = ["requests>=2.25.0"]
                     with patch.object(
                         validator, "run_tests", return_value={"success": True}
                     ):
-                        with patch("subprocess.run") as mock_run:
+                        with patch(
+                            "vet_core.security.upgrade_validator.secure_subprocess_run"
+                        ) as mock_run:
                             mock_run.side_effect = [
                                 Mock(
                                     returncode=0, stdout="Version: 2.25.0\n"
                                 ),  # pip show
+                                Mock(
+                                    returncode=0,
+                                    stdout="requests==2.25.0\nclick==8.0.0\n",
+                                ),  # pip freeze for backup
                                 Mock(returncode=0, stdout="", stderr=""),  # pip install
                             ]
 
@@ -566,7 +579,7 @@ dependencies = ["requests>=2.25.0"]
             with UpgradeValidator(project_root) as validator:
                 # Test handling of various error conditions
                 with patch(
-                    "subprocess.run",
+                    "vet_core.security.upgrade_validator.secure_subprocess_run",
                     side_effect=subprocess.CalledProcessError(1, "cmd"),
                 ):
                     result = validator.validate_upgrade("nonexistent", "1.0.0")

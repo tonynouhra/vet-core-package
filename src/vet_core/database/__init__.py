@@ -13,7 +13,7 @@ from .connection import (
     create_engine,
     get_database_info,
     get_database_url,
-    test_connection,
+    check_connection,
     wait_for_database,
 )
 from .migrations import (
@@ -43,7 +43,7 @@ __all__ = [
     "DatabaseConfig",
     "create_engine",
     "get_database_url",
-    "test_connection",
+    "check_connection",
     "close_engine",
     "wait_for_database",
     "check_database_exists",

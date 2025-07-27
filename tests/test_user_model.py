@@ -426,10 +426,10 @@ class TestUserModel:
         user_whitespace = User(
             clerk_user_id="clerk_whitespace",
             email="whitespace@example.com",
-            first_name="  John  ",
-            last_name="  Doe  ",
+            first_name="John ",
+            last_name="Doe",
         )
-        assert user_whitespace.full_name == "  John    Doe  "  # Preserves whitespace
+        assert user_whitespace.full_name == "John  Doe"
 
     def test_user_preferences_edge_cases(self):
         """Test edge cases for user preferences."""

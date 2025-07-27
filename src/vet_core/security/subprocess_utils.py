@@ -688,14 +688,12 @@ def secure_subprocess_run(
         "shell": False,  # Never use shell
         "capture_output": True,  # Capture output by default
         "text": True,  # Use text mode by default
-        **kwargs,  # Allow overrides
+        "check": False,  # Set check=False by default to handle errors manually
+        **kwargs,  # Allow overrides (including check parameter)
     }
 
-    # Set check=False by default to handle errors manually
-    secure_kwargs.setdefault("check", False)
-
     # nosec B603: This is a controlled subprocess call with validation
-    return subprocess.run(cmd, check=False, **secure_kwargs)  # nosec
+    return subprocess.run(cmd, **secure_kwargs)  # nosec
 
 
 def secure_subprocess_run_with_logging(
