@@ -21,7 +21,7 @@ import logging
 import math
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from .models import SecurityReport, Vulnerability, VulnerabilitySeverity
 
@@ -48,7 +48,7 @@ class RiskAssessment:
     remediation_complexity: str = "medium"  # "low", "medium", "high"
     business_impact: str = "medium"  # "low", "medium", "high", "critical"
 
-    def to_dict(self) -> Dict[str, any]:
+    def to_dict(self) -> Dict[str, Any]:
         """Convert risk assessment to dictionary representation."""
         return {
             "vulnerability_id": self.vulnerability_id,
@@ -130,7 +130,7 @@ class PackageProfile:
 
         return min(max(exposure_score, 0.0), 1.0)
 
-    def to_dict(self) -> Dict[str, any]:
+    def to_dict(self) -> Dict[str, Any]:
         """Convert package profile to dictionary representation."""
         return {
             "name": self.name,
@@ -497,7 +497,7 @@ class RiskAssessor:
         assessments = self.assess_report(report)
         vulnerability_map = {v.id: v for v in report.vulnerabilities}
 
-        prioritized = {
+        prioritized: Dict[str, List[Tuple[Vulnerability, RiskAssessment]]] = {
             "immediate": [],
             "urgent": [],
             "scheduled": [],
@@ -996,7 +996,7 @@ class RiskAssessor:
 
     def generate_priority_summary(
         self, prioritized: Dict[str, List[Tuple[Vulnerability, RiskAssessment]]]
-    ) -> Dict[str, any]:
+    ) -> Dict[str, Any]:
         """
         Generate a comprehensive summary of vulnerability priorities.
 
@@ -1077,7 +1077,7 @@ class RiskAssessor:
 
         return summary
 
-    def get_package_risk_profile(self, package_name: str) -> Dict[str, any]:
+    def get_package_risk_profile(self, package_name: str) -> Dict[str, Any]:
         """
         Get comprehensive risk profile for a specific package.
 
@@ -1112,7 +1112,7 @@ class RiskAssessor:
 
     def analyze_vulnerability_trends(
         self, reports: List[SecurityReport]
-    ) -> Dict[str, any]:
+    ) -> Dict[str, Any]:
         """
         Analyze trends across multiple security reports.
 
@@ -1144,11 +1144,11 @@ class RiskAssessor:
         trend_data["vulnerability_trends"] = {
             "total_vulnerabilities": sum(vuln_counts),
             "average_per_scan": sum(vuln_counts) / len(vuln_counts),
-            "trend_direction": self._calculate_trend_direction(vuln_counts),
+            "trend_direction": self._calculate_trend_direction([float(x) for x in vuln_counts]),
         }
 
         # Analyze severity trends
-        severity_counts = {severity.value: [] for severity in VulnerabilitySeverity}
+        severity_counts: Dict[str, List[int]] = {severity.value: [] for severity in VulnerabilitySeverity}
         for report in sorted_reports:
             for severity in VulnerabilitySeverity:
                 count = len(report.get_vulnerabilities_by_severity(severity))
@@ -1158,7 +1158,7 @@ class RiskAssessor:
             severity: {
                 "total": sum(counts),
                 "average": sum(counts) / len(counts),
-                "trend": self._calculate_trend_direction(counts),
+                "trend": self._calculate_trend_direction([float(x) for x in counts]),
             }
             for severity, counts in severity_counts.items()
         }

@@ -50,7 +50,7 @@ class UpgradeResult:
         package_name: str,
         from_version: str,
         to_version: str,
-        test_results: Dict[str, Any] = None,
+        test_results: Optional[Dict[str, Any]] = None,
         validation_duration: float = 0.0,
     ) -> "UpgradeResult":
         """Create a successful upgrade result."""
@@ -70,7 +70,7 @@ class UpgradeResult:
         from_version: str,
         to_version: str,
         error_message: str,
-        compatibility_issues: List[str] = None,
+        compatibility_issues: Optional[List[str]] = None,
         rollback_performed: bool = False,
         validation_duration: float = 0.0,
     ) -> "UpgradeResult":
@@ -137,11 +137,11 @@ class UpgradeValidator:
         self.pyproject_path = self.project_root / "pyproject.toml"
         self.temp_dir = Path(tempfile.mkdtemp(prefix="upgrade_validation_"))
 
-    def __enter__(self):
+    def __enter__(self) -> "UpgradeValidator":
         """Context manager entry."""
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Context manager exit - cleanup temporary files."""
         self.cleanup()
 
@@ -580,7 +580,7 @@ def validate_vulnerability_fixes(
         List of UpgradeResult objects
     """
     # Group vulnerabilities by package to avoid duplicate upgrades
-    package_upgrades = {}
+    package_upgrades: Dict[str, Dict[str, Any]] = {}
 
     for vuln in vulnerabilities:
         if not vuln.is_fixable:
@@ -588,6 +588,10 @@ def validate_vulnerability_fixes(
 
         package_name = vuln.package_name
         recommended_version = vuln.recommended_fix_version
+
+        # Skip if no recommended version is available
+        if not recommended_version:
+            continue
 
         if package_name not in package_upgrades:
             package_upgrades[package_name] = {
@@ -598,7 +602,7 @@ def validate_vulnerability_fixes(
         else:
             # If we already have an upgrade for this package, use the higher version
             existing_target = package_upgrades[package_name]["target_version"]
-            if recommended_version > existing_target:
+            if existing_target and recommended_version > existing_target:
                 package_upgrades[package_name]["target_version"] = recommended_version
             package_upgrades[package_name]["vulnerabilities"].append(vuln)
 

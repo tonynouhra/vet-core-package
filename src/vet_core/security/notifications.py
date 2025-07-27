@@ -33,7 +33,7 @@ class NotificationConfig:
     smtp_username: Optional[str] = None
     smtp_password: Optional[str] = None
     email_from: Optional[str] = None
-    email_to: List[str] = None
+    email_to: Optional[List[str]] = None
 
     # Slack settings
     slack_webhook_url: Optional[str] = None
@@ -54,7 +54,7 @@ class NotificationConfig:
     notification_title_prefix: str = "🚨 Security Alert"
     include_remediation_recommendations: bool = True
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Initialize default values after dataclass creation."""
         if self.email_to is None:
             self.email_to = []
@@ -277,6 +277,12 @@ class SecurityNotifier:
                 report, prioritized, priority_summary
             )
 
+            # Validate required email configuration
+            if not self.config.email_from or not self.config.email_to:
+                raise ValueError("Email configuration incomplete: email_from and email_to are required")
+            if not self.config.smtp_server or not self.config.smtp_username or not self.config.smtp_password:
+                raise ValueError("SMTP configuration incomplete: server, username, and password are required")
+
             # Create message
             msg = MIMEMultipart("alternative")
             msg["Subject"] = subject
@@ -426,8 +432,14 @@ class SecurityNotifier:
                 "labels": ["security", "vulnerability", "critical", "automated"],
             }
 
+            # Validate GitHub configuration
+            if not self.config.github_repo:
+                raise ValueError("GitHub repository not configured")
+            
             # Send to GitHub API
             repo_parts = self.config.github_repo.split("/")
+            if len(repo_parts) != 2:
+                raise ValueError("GitHub repository must be in format 'owner/repo'")
             url = f"https://api.github.com/repos/{repo_parts[0]}/{repo_parts[1]}/issues"
 
             response = requests.post(url, json=payload, headers=headers, timeout=30)

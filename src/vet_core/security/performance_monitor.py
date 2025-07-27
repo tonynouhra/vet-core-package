@@ -258,7 +258,7 @@ class PerformanceMonitor:
         peak_memory = baseline_memory
 
         # Monitor memory during operation
-        def memory_monitor():
+        def memory_monitor() -> None:
             nonlocal peak_memory
             while True:
                 try:
@@ -400,7 +400,7 @@ class PerformanceMonitor:
         cpu_samples = []
         start_time = time.time()
 
-        def cpu_monitor():
+        def cpu_monitor() -> None:
             while time.time() - start_time < duration:
                 try:
                     cpu_percent = self.process.cpu_percent(interval=0.1)
@@ -456,10 +456,10 @@ class PerformanceMonitor:
 
     def collect_comprehensive_metrics(
         self,
-        modules_to_import: List[str] = None,
-        packages_to_measure: List[str] = None,
+        modules_to_import: Optional[List[str]] = None,
+        packages_to_measure: Optional[List[str]] = None,
         test_command: str = "pytest",
-        startup_command: List[str] = None,
+        startup_command: Optional[List[str]] = None,
     ) -> PerformanceMetrics:
         """
         Collect comprehensive performance metrics.
@@ -492,7 +492,7 @@ class PerformanceMonitor:
             logger.error(f"Failed to measure import time: {e}")
 
         # Measure test execution time with memory monitoring
-        def run_tests():
+        def run_tests() -> None:
             metrics.test_execution_time = self.measure_test_execution_time(test_command)
 
         try:
@@ -520,7 +520,7 @@ class PerformanceMonitor:
                 logger.error(f"Failed to measure startup time: {e}")
 
         # Measure CPU usage during a simple operation
-        def simple_operation():
+        def simple_operation() -> None:
             time.sleep(1)  # Simple operation for CPU measurement
 
         try:
@@ -529,7 +529,7 @@ class PerformanceMonitor:
             logger.error(f"Failed to measure CPU usage: {e}")
 
         # Measure disk I/O during test execution
-        def test_operation():
+        def test_operation() -> None:
             self.measure_test_execution_time(test_command)
 
         try:
