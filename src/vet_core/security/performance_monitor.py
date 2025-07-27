@@ -422,7 +422,7 @@ class PerformanceMonitor:
         monitor_thread.join(timeout=1.0)
 
         if cpu_samples:
-            return sum(cpu_samples) / len(cpu_samples)
+            return float(sum(cpu_samples) / len(cpu_samples))
         return 0.0
 
     def measure_disk_io(self, operation: Callable[[], Any]) -> Dict[str, float]:
