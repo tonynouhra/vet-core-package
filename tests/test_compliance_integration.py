@@ -11,6 +11,7 @@ Requirements addressed:
 - 4.3: Compliance report generation with vulnerability management evidence
 - 4.4: Evidence of proactive security management practices
 """
+
 import gc
 import json
 import platform

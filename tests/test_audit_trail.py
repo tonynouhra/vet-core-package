@@ -95,7 +95,9 @@ class TestSecurityAuditTrail:
                         if attempt < 9:
                             time.sleep(0.2)
                         else:
-                            print(f"Warning: Could not delete temporary log file {log_path}")
+                            print(
+                                f"Warning: Could not delete temporary log file {log_path}"
+                            )
             else:
                 if log_path.exists():
                     log_path.unlink()
@@ -114,7 +116,7 @@ class TestSecurityAuditTrail:
         # Explicit cleanup to ensure database connections are closed
         try:
             # Close any open database connections
-            if hasattr(trail, '_db_connection'):
+            if hasattr(trail, "_db_connection"):
                 trail._db_connection.close()
 
             # Force garbage collection

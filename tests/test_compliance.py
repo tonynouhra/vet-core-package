@@ -8,8 +8,11 @@ This module tests the comprehensive compliance system including:
 - Evidence generation
 """
 
+import gc
 import json
+import platform
 import tempfile
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -37,12 +40,28 @@ class TestSecurityComplianceManager:
     @pytest.fixture
     def temp_db_path(self):
         """Create temporary database path for testing."""
-        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
-            db_path = Path(f.name)
+        fd, temp_path = tempfile.mkstemp(suffix=".db")
+        db_path = Path(temp_path)
+        os.close(fd)
+
         yield db_path
-        # Cleanup
-        if db_path.exists():
-            db_path.unlink()
+
+        # Windows-safe cleanup
+        gc.collect()
+        if platform.system() == "Windows":
+            for i in range(5):
+                try:
+                    if db_path.exists():
+                        db_path.unlink()
+                    break
+                except PermissionError:
+                    if i < 4:
+                        time.sleep(0.2)
+                    else:
+                        print(f"Warning: Could not delete {db_path}")
+        else:
+            if db_path.exists():
+                db_path.unlink()
 
     @pytest.fixture
     def audit_trail(self, temp_db_path):
