@@ -419,6 +419,17 @@ class UpgradeValidator:
                         test_results["failures"] = int(parts[i - 1])
                     elif part == "error," or part == "error":
                         test_results["errors"] = int(parts[i - 1])
+                    elif part == "in" and i + 1 < len(parts):
+                        # Extract duration from "in 2.34s" format
+                        duration_str = parts[i + 1]
+                        if duration_str.endswith("s"):
+                            try:
+                                duration = float(
+                                    duration_str[:-1]
+                                )  # Remove 's' and convert to float
+                                test_results["duration"] = duration
+                            except ValueError:
+                                pass  # Keep default duration if parsing fails
                 break
 
     def validate_upgrade(
