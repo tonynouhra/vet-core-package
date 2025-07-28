@@ -797,16 +797,19 @@ class SecurityAuditTrail:
         )
 
         # Calculate overdue remediations (based on policy thresholds)
+        # Count vulnerabilities that exceeded policy thresholds, regardless of resolution status
         overdue_count = 0
         for vuln in current_report.vulnerabilities:
             if vuln.severity in [
                 VulnerabilitySeverity.CRITICAL,
                 VulnerabilitySeverity.HIGH,
             ]:
-                # Check if vulnerability is older than policy threshold (in hours)
+                # Check if it's overdue based on policy thresholds
                 hours_old = (
                     datetime.now() - vuln.discovered_date
                 ).total_seconds() / 3600
+
+                # Consider critical/high vulnerabilities as overdue if they exceed policy thresholds
                 if (
                     vuln.severity == VulnerabilitySeverity.CRITICAL and hours_old > 24
                 ) or (vuln.severity == VulnerabilitySeverity.HIGH and hours_old > 72):

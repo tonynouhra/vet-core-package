@@ -942,15 +942,11 @@ class RiskAssessor:
 
         base_impact = severity_impact[vulnerability.severity]
 
-        # Only upgrade to critical for CRITICAL severity vulnerabilities with very high package criticality
+        # Adjust based on package criticality
         package_criticality = impact_factors.get("package_criticality", 0.5)
-        if (
-            vulnerability.severity == VulnerabilitySeverity.CRITICAL
-            and package_criticality > 0.9
-        ):
-            base_impact = "critical"
-        # Upgrade impact level for highly critical packages, but only by one level
-        elif package_criticality > 0.8 and base_impact in ["low", "medium"]:
+        if package_criticality > 0.8 and base_impact in ["low", "medium"]:
+            # Upgrade impact level for critical packages, but only by one level
+            # and never upgrade HIGH severity vulnerabilities to critical
             impact_levels = ["low", "medium", "high", "critical"]
             current_index = impact_levels.index(base_impact)
             if current_index < len(impact_levels) - 1:

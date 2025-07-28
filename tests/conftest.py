@@ -169,8 +169,9 @@ async def async_session(
         try:
             yield session
         finally:
-            # Always rollback to ensure test isolation
-            await transaction.rollback()
+            # Check if transaction is still active before attempting rollback
+            if transaction.is_active:
+                await transaction.rollback()
 
 
 @pytest_asyncio.fixture

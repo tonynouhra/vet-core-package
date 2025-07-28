@@ -230,12 +230,12 @@ class TestPetModel:
         pet4 = Pet(owner_id=test_user.id, name="Mystery", species=PetSpecies.CAT)
         assert pet4.breed_display == "Unknown"
 
-    def test_pet_vaccination_tracking(self, async_session, test_user):
+    async def test_pet_vaccination_tracking(self, async_session, test_user):
         """Test vaccination record management."""
         pet = Pet(owner_id=test_user.id, name="Buddy", species=PetSpecies.DOG)
 
         async_session.add(pet)
-        async_session.commit()
+        await async_session.commit()
 
         # Add vaccination record (recent date to ensure it's not due)
         vaccination_date = date.today() - timedelta(days=30)  # 30 days ago
@@ -249,7 +249,8 @@ class TestPetModel:
             notes="No adverse reactions",
         )
 
-        async_session.commit()
+        await async_session.commit()
+        await async_session.refresh(pet)
 
         # Check vaccination was added
         assert pet.vaccination_records is not None
