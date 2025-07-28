@@ -125,8 +125,8 @@ class TestSessionManager:
 
     async def test_get_transaction_context_manager(self, session_manager):
         """Test transaction context manager."""
-        from unittest.mock import AsyncMock
         from contextlib import asynccontextmanager
+        from unittest.mock import AsyncMock
 
         mock_session = AsyncMock()
         mock_transaction = AsyncMock()

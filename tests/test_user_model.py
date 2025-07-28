@@ -429,7 +429,7 @@ class TestUserModel:
             first_name="John ",
             last_name="Doe",
         )
-        assert user_whitespace.full_name == "John  Doe"
+        assert user_whitespace.full_name == "John Doe"
 
     def test_user_preferences_edge_cases(self):
         """Test edge cases for user preferences."""

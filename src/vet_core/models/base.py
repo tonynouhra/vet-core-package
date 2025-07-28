@@ -41,9 +41,9 @@ from sqlalchemy import Boolean, DateTime, String, text
 from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
 from sqlalchemy.engine import Dialect
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy.types import TypeDecorator, TypeEngine, CHAR
 from sqlalchemy.sql import func
 from sqlalchemy.sql.elements import ColumnElement
+from sqlalchemy.types import CHAR, TypeDecorator, TypeEngine
 
 # Type variable for model classes
 T = TypeVar("T", bound="BaseModel")
@@ -62,8 +62,9 @@ class GUID(TypeDecorator):
 
     def load_dialect_impl(self, dialect: Dialect) -> TypeEngine[Any]:
         """
-        Loads and returns an appropriate type implementation for the dialect,
-        based on the database in use. This method provides support for different
+        Load and return an appropriate type implementation for the dialect.
+
+        Based on the database in use. This method provides support for different
         database systems by specifying the type descriptor accordingly.
 
         Args:
@@ -79,8 +80,9 @@ class GUID(TypeDecorator):
 
     def process_bind_param(self, value: Any, dialect: Dialect) -> Optional[str]:
         """
-        Processes the parameter to be bound to a SQL query, converting it to a string
-        representation suitable for the specified SQL dialect. It ensures the parameter
+        Process the parameter to be bound to a SQL query, converting it to a string.
+
+        Representation suitable for the specified SQL dialect. It ensures the parameter
         is correctly formatted as a UUID or string, depending on the dialect and input.
 
         Parameters:
@@ -104,8 +106,9 @@ class GUID(TypeDecorator):
 
     def process_result_value(self, value: Any, dialect: Dialect) -> Optional[uuid.UUID]:
         """
-        Processes the result value retrieved from the database and ensures it is a valid UUID. If the value
-        is already a UUID, it will be returned as-is. If the value is None, it returns None. Otherwise, it
+        Process the result value retrieved from the database and ensure it is a valid UUID.
+
+        If the value is already a UUID, it will be returned as-is. If the value is None, it returns None. Otherwise, it
         attempts to convert the value to a UUID.
 
         Params:
