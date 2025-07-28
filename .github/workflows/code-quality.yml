@@ -252,7 +252,7 @@ jobs:
 
     - name: Run unit tests (no database)
       run: |
-        pytest tests/ -m "not database" -v
+        pytest tests/ -m "not database" -v -p no:postgresql
 
   code-coverage:
     name: Code Coverage Analysis
