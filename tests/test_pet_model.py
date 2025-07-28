@@ -11,6 +11,7 @@ from decimal import Decimal
 
 import pytest
 import pytest_asyncio
+from sqlalchemy.exc import IntegrityError
 
 from vet_core.models import (
     Base,
@@ -236,14 +237,15 @@ class TestPetModel:
         async_session.add(pet)
         async_session.commit()
 
-        # Add vaccination record
-        vaccination_date = date(2023, 1, 15)
+        # Add vaccination record (recent date to ensure it's not due)
+        vaccination_date = date.today() - timedelta(days=30)  # 30 days ago
+        next_due = date.today() + timedelta(days=335)  # Due in ~11 months
         pet.add_vaccination_record(
             vaccine_type="Rabies",
             date_administered=vaccination_date,
             veterinarian="Dr. Smith",
             batch_number="RB123456",
-            next_due_date=date(2024, 1, 15),
+            next_due_date=next_due,
             notes="No adverse reactions",
         )
 
@@ -494,7 +496,7 @@ class TestPetModel:
 
         assert pet.display_name == "Buddy"
 
-    def test_pet_microchip_uniqueness(self, async_session, test_user):
+    async def test_pet_microchip_uniqueness(self, async_session, test_user):
         """Test that microchip IDs are unique."""
         microchip_id = "123456789012345"
 
@@ -507,7 +509,7 @@ class TestPetModel:
         )
 
         async_session.add(pet1)
-        async_session.commit()
+        await async_session.commit()
 
         # Try to create second pet with same microchip ID
         pet2 = Pet(
@@ -520,8 +522,8 @@ class TestPetModel:
         async_session.add(pet2)
 
         # This should raise an integrity error due to unique constraint
-        with pytest.raises(Exception):  # SQLAlchemy will raise an IntegrityError
-            async_session.commit()
+        with pytest.raises(IntegrityError):  # SQLAlchemy will raise an IntegrityError
+            await async_session.commit()
 
     def test_pet_jsonb_fields_initialization(self, async_session, test_user):
         """Test that JSONB fields are properly initialized."""

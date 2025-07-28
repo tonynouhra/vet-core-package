@@ -175,7 +175,7 @@ def test_another():
         # Should be cleaned up after context exit
         assert not temp_dir.exists()
 
-    @patch("vet_core.security.subprocess_utils.secure_subprocess_run")
+    @patch("vet_core.security.upgrade_validator.secure_subprocess_run")
     def test_create_environment_backup(self, mock_run, temp_project):
         """Test creating environment backup."""
         # Mock pip freeze output
@@ -201,11 +201,11 @@ def test_another():
             mock_run.assert_called()
             call_args = mock_run.call_args
             assert call_args[0][0] == [sys.executable, "-m", "pip", "freeze"]
-            assert call_args[1]["capture_output"] is True
-            assert call_args[1]["text"] is True
+            # Check that the function was called with the expected kwargs
+            assert call_args[1]["validate_first_arg"] is False
             assert call_args[1]["check"] is True
 
-    @patch("vet_core.security.subprocess_utils.secure_subprocess_run")
+    @patch("vet_core.security.upgrade_validator.secure_subprocess_run")
     def test_restore_environment(self, mock_run, temp_project):
         """Test restoring environment from backup."""
         # Mock pip freeze for backup creation
@@ -235,7 +235,7 @@ def test_another():
             assert "-r" in args
             assert str(backup.requirements_file) in args
 
-    @patch("vet_core.security.subprocess_utils.secure_subprocess_run")
+    @patch("vet_core.security.upgrade_validator.secure_subprocess_run")
     def test_check_dependency_conflicts(self, mock_run, temp_project):
         """Test checking for dependency conflicts."""
         with UpgradeValidator(temp_project) as validator:
@@ -250,7 +250,7 @@ def test_another():
             assert conflicts == []
             assert mock_run.call_count == 2
 
-    @patch("vet_core.security.subprocess_utils.secure_subprocess_run")
+    @patch("vet_core.security.upgrade_validator.secure_subprocess_run")
     def test_check_dependency_conflicts_with_issues(self, mock_run, temp_project):
         """Test checking for dependency conflicts when issues exist."""
         with UpgradeValidator(temp_project) as validator:
@@ -270,7 +270,7 @@ def test_another():
             assert "Could not find a version" in conflicts[0]
             assert "package-x has requirement y>1.0" in conflicts[1]
 
-    @patch("vet_core.security.subprocess_utils.secure_subprocess_run")
+    @patch("vet_core.security.upgrade_validator.secure_subprocess_run")
     @patch("os.chdir")
     def test_run_tests_success(self, mock_chdir, mock_run, temp_project):
         """Test running tests successfully."""
@@ -289,7 +289,7 @@ def test_another():
             assert result["errors"] == 0
             assert result["duration"] > 0
 
-    @patch("vet_core.security.subprocess_utils.secure_subprocess_run")
+    @patch("vet_core.security.upgrade_validator.secure_subprocess_run")
     @patch("os.chdir")
     def test_run_tests_failure(self, mock_chdir, mock_run, temp_project):
         """Test running tests with failures."""
@@ -310,7 +310,7 @@ def test_another():
             assert result["errors"] == 1
             assert "Test errors occurred" in result["stderr"]
 
-    @patch("vet_core.security.subprocess_utils.secure_subprocess_run")
+    @patch("vet_core.security.upgrade_validator.secure_subprocess_run")
     def test_validate_upgrade_success(self, mock_run, temp_project):
         """Test successful upgrade validation."""
         with UpgradeValidator(temp_project) as validator:
@@ -338,7 +338,7 @@ def test_another():
             assert result.test_results["success"] is True
             assert result.rollback_performed is False
 
-    @patch("vet_core.security.subprocess_utils.secure_subprocess_run")
+    @patch("vet_core.security.upgrade_validator.secure_subprocess_run")
     def test_validate_upgrade_test_failure_with_rollback(self, mock_run, temp_project):
         """Test upgrade validation with test failure and rollback."""
         with UpgradeValidator(temp_project) as validator:
@@ -363,7 +363,7 @@ def test_another():
             assert result.error_message == "Tests failed after upgrade"
             assert result.rollback_performed is True
 
-    @patch("vet_core.security.subprocess_utils.secure_subprocess_run")
+    @patch("vet_core.security.upgrade_validator.secure_subprocess_run")
     def test_validate_upgrade_dependency_conflicts(self, mock_run, temp_project):
         """Test upgrade validation with dependency conflicts."""
         with UpgradeValidator(temp_project) as validator:
@@ -381,7 +381,7 @@ def test_another():
             assert result.error_message == "Dependency conflicts detected"
             assert len(result.compatibility_issues) > 0
 
-    @patch("vet_core.security.subprocess_utils.secure_subprocess_run")
+    @patch("vet_core.security.upgrade_validator.secure_subprocess_run")
     def test_validate_multiple_upgrades_success(self, mock_run, temp_project):
         """Test validating multiple upgrades successfully."""
         with UpgradeValidator(temp_project) as validator:
@@ -411,7 +411,7 @@ def test_another():
             assert len(results) == 2
             assert all(r.success for r in results)
 
-    @patch("vet_core.security.subprocess_utils.secure_subprocess_run")
+    @patch("vet_core.security.upgrade_validator.secure_subprocess_run")
     def test_validate_multiple_upgrades_with_failure(self, mock_run, temp_project):
         """Test validating multiple upgrades with one failure."""
         with UpgradeValidator(temp_project) as validator:

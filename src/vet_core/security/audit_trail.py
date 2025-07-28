@@ -153,15 +153,38 @@ class SecurityAuditTrail:
 
         self.retention_days = retention_days
 
+        # Track initialization status
+        self._database_initialized = False
+        self._file_logging_initialized = False
+
+        # Try to initialize database and file logging
+        self._initialize_components()
+
+    def _initialize_components(self) -> None:
+        """Initialize database and file logging components with error handling."""
         # Initialize database
-        self._init_database()
+        try:
+            self._init_database()
+            self._database_initialized = True
+        except Exception as e:
+            self.logger.warning(f"Database initialization failed: {e}")
+            # Don't re-raise the exception - this is expected behavior
 
         # Set up file logging
-        self._setup_file_logging()
+        try:
+            self._setup_file_logging()
+            self._file_logging_initialized = True
+        except Exception as e:
+            self.logger.warning(f"File logging initialization failed: {e}")
 
-        self.logger.info(
-            f"Initialized SecurityAuditTrail with database: {self.audit_db_path}"
-        )
+        if self._database_initialized:
+            self.logger.info(
+                f"Initialized SecurityAuditTrail with database: {self.audit_db_path}"
+            )
+        else:
+            self.logger.warning(
+                f"SecurityAuditTrail initialized with limited functionality - database unavailable"
+            )
 
     def _init_database(self) -> None:
         """Initialize the SQLite database for audit events."""
@@ -239,7 +262,20 @@ class SecurityAuditTrail:
 
                 conn.commit()
 
+        except (OSError, PermissionError) as e:
+            # Handle file system errors gracefully
+            self.logger.error(
+                f"Failed to initialize audit database due to file system error: {e}"
+            )
+            raise
+        except sqlite3.Error as e:
+            # Handle SQLite-specific errors
+            self.logger.error(
+                f"Failed to initialize audit database due to SQLite error: {e}"
+            )
+            raise
         except Exception as e:
+            # Handle any other unexpected errors
             self.logger.error(f"Failed to initialize audit database: {e}")
             raise
 
@@ -273,7 +309,14 @@ class SecurityAuditTrail:
             # Prevent propagation to root logger
             self.audit_logger.propagate = False
 
+        except (OSError, PermissionError) as e:
+            # Handle file system errors gracefully
+            self.logger.error(
+                f"Failed to setup file logging due to file system error: {e}"
+            )
+            raise
         except Exception as e:
+            # Handle any other unexpected errors
             self.logger.error(f"Failed to setup file logging: {e}")
             raise
 
@@ -284,14 +327,33 @@ class SecurityAuditTrail:
         Args:
             event: The audit event to log
         """
+        logged_successfully = False
+
         try:
-            # Log to database
-            self._log_to_database(event)
+            # Log to database if available
+            if self._database_initialized:
+                self._log_to_database(event)
+                logged_successfully = True
+            else:
+                self.logger.warning(
+                    f"Database not available, skipping database logging for event: {event.event_id}"
+                )
 
-            # Log to file
-            self._log_to_file(event)
+            # Log to file if available
+            if self._file_logging_initialized:
+                self._log_to_file(event)
+                logged_successfully = True
+            else:
+                self.logger.warning(
+                    f"File logging not available, skipping file logging for event: {event.event_id}"
+                )
 
-            self.logger.debug(f"Logged audit event: {event.event_id}")
+            if logged_successfully:
+                self.logger.debug(f"Logged audit event: {event.event_id}")
+            else:
+                self.logger.error(
+                    f"Failed to log audit event {event.event_id}: No logging mechanisms available"
+                )
 
         except Exception as e:
             self.logger.error(f"Failed to log audit event {event.event_id}: {e}")
@@ -592,6 +654,12 @@ class SecurityAuditTrail:
         Returns:
             List of matching audit events
         """
+        if not self._database_initialized:
+            self.logger.warning(
+                "Database not initialized, returning empty audit events list"
+            )
+            return []
+
         try:
             with sqlite3.connect(self.audit_db_path) as conn:
                 cursor = conn.cursor()
@@ -728,18 +796,20 @@ class SecurityAuditTrail:
             ]
         )
 
-        # Calculate overdue remediations (simplified logic)
+        # Calculate overdue remediations (based on policy thresholds)
         overdue_count = 0
         for vuln in current_report.vulnerabilities:
             if vuln.severity in [
                 VulnerabilitySeverity.CRITICAL,
                 VulnerabilitySeverity.HIGH,
             ]:
-                # Check if vulnerability is older than policy threshold
-                days_old = (datetime.now() - vuln.discovered_date).days
+                # Check if vulnerability is older than policy threshold (in hours)
+                hours_old = (
+                    datetime.now() - vuln.discovered_date
+                ).total_seconds() / 3600
                 if (
-                    vuln.severity == VulnerabilitySeverity.CRITICAL and days_old > 1
-                ) or (vuln.severity == VulnerabilitySeverity.HIGH and days_old > 3):
+                    vuln.severity == VulnerabilitySeverity.CRITICAL and hours_old > 24
+                ) or (vuln.severity == VulnerabilitySeverity.HIGH and hours_old > 72):
                     overdue_count += 1
 
         # Calculate compliance score (0-100)
@@ -794,6 +864,12 @@ class SecurityAuditTrail:
 
     def _store_compliance_metrics(self, metrics: ComplianceMetrics) -> None:
         """Store compliance metrics in database."""
+        if not self._database_initialized:
+            self.logger.warning(
+                "Database not initialized, skipping compliance metrics storage"
+            )
+            return
+
         try:
             with sqlite3.connect(self.audit_db_path) as conn:
                 cursor = conn.cursor()
@@ -858,18 +934,28 @@ class SecurityAuditTrail:
         events = self.get_audit_events(start_date=start_date, end_date=end_date)
 
         # Get compliance metrics for the period
-        with sqlite3.connect(self.audit_db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                SELECT * FROM compliance_metrics 
-                WHERE assessment_date >= ? AND assessment_date <= ?
-                ORDER BY assessment_date DESC
-            """,
-                (start_date.isoformat(), end_date.isoformat()),
-            )
+        metrics_rows = []
+        if self._database_initialized:
+            try:
+                with sqlite3.connect(self.audit_db_path) as conn:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        """
+                        SELECT * FROM compliance_metrics 
+                        WHERE assessment_date >= ? AND assessment_date <= ?
+                        ORDER BY assessment_date DESC
+                    """,
+                        (start_date.isoformat(), end_date.isoformat()),
+                    )
 
-            metrics_rows = cursor.fetchall()
+                    metrics_rows = cursor.fetchall()
+            except Exception as e:
+                self.logger.error(f"Failed to retrieve compliance metrics: {e}")
+                metrics_rows = []
+        else:
+            self.logger.warning(
+                "Database not initialized, compliance metrics history will be empty"
+            )
 
         # Analyze events by type
         event_summary = {}
@@ -1020,6 +1106,12 @@ class SecurityAuditTrail:
         Returns:
             Number of events deleted
         """
+        if not self._database_initialized:
+            self.logger.warning(
+                "Database not initialized, skipping cleanup of old events"
+            )
+            return 0
+
         cutoff_date = datetime.now() - timedelta(days=self.retention_days)
 
         try:

@@ -575,8 +575,10 @@ class TestRiskAssessorIntegration:
         # Setuptools vulnerability should be higher priority than black
         setuptools_found = False
         black_found = False
+        setuptools_priority = None
+        black_priority = None
 
-        for priority_level in ["immediate", "urgent"]:
+        for priority_level in ["immediate", "urgent", "scheduled", "planned"]:
             for vuln, assessment in prioritized[priority_level]:
                 if vuln.package_name == "setuptools":
                     setuptools_found = True

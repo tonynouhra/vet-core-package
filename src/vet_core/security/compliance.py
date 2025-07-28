@@ -197,16 +197,19 @@ class SecurityComplianceManager:
             scan_violations = self._check_scan_frequency_compliance()
             violations.extend(scan_violations)
 
-        # Calculate compliance metrics
-        metrics = self.audit_trail.calculate_compliance_metrics(current_report)
-
-        # Log violations
+        # Log violations first so they are counted in metrics
         for violation in violations:
             self.audit_trail.log_policy_violation(
                 violation_type=violation.violation_type,
                 description=violation.description,
                 vulnerability_id=violation.vulnerability_id,
             )
+
+        # Calculate compliance metrics after logging violations
+        metrics = self.audit_trail.calculate_compliance_metrics(current_report)
+
+        # Update metrics with current violation count
+        metrics.policy_violations = len(violations)
 
         self.logger.info(
             f"Compliance check completed: {len(violations)} violations found"
@@ -218,11 +221,14 @@ class SecurityComplianceManager:
         self, vulnerability: Vulnerability
     ) -> Optional[ComplianceViolation]:
         """Check if a vulnerability violates any policy rules."""
-        # Find applicable policy rules
+        # Find applicable policy rules (exclude DAILY_SCAN as it's for scan frequency, not vulnerability resolution)
         applicable_rules = [
             rule
             for rule in self.policy_rules.values()
-            if rule.is_active and self._is_rule_applicable(rule, vulnerability)
+            if rule.is_active
+            and rule.rule_id
+            != "DAILY_SCAN"  # DAILY_SCAN is for scan frequency, not vulnerability resolution
+            and self._is_rule_applicable(rule, vulnerability)
         ]
 
         if not applicable_rules:
@@ -233,28 +239,47 @@ class SecurityComplianceManager:
             datetime.now() - vulnerability.discovered_date
         ).total_seconds() / 3600
 
+        # Find the most specific violated rule (exact severity match first, then most restrictive)
+        violated_rules = []
         for rule in applicable_rules:
             if age_hours > rule.max_resolution_time_hours:
-                return ComplianceViolation(
-                    violation_id=f"VIOLATION_{vulnerability.id}_{rule.rule_id}",
-                    rule_id=rule.rule_id,
-                    vulnerability_id=vulnerability.id,
-                    package_name=vulnerability.package_name,
-                    violation_type="resolution_time_exceeded",
-                    description=f"Vulnerability {vulnerability.id} in {vulnerability.package_name} "
-                    f"has exceeded {rule.max_resolution_time_hours}h resolution time limit "
-                    f"(current age: {age_hours:.1f}h)",
-                    severity=vulnerability.severity.value,
-                    detected_at=datetime.now(),
-                )
+                violated_rules.append(rule)
 
-        return None
+        if not violated_rules:
+            return None
+
+        # Return violation for the most specific rule (exact severity match preferred)
+        # If multiple rules match, prefer the one with exact severity match, then shortest time limit
+        exact_severity_rules = [
+            r for r in violated_rules if r.severity_threshold == vulnerability.severity
+        ]
+        if exact_severity_rules:
+            most_specific_rule = min(
+                exact_severity_rules, key=lambda r: r.max_resolution_time_hours
+            )
+        else:
+            most_specific_rule = min(
+                violated_rules, key=lambda r: r.max_resolution_time_hours
+            )
+
+        return ComplianceViolation(
+            violation_id=f"VIOLATION_{vulnerability.id}_{most_specific_rule.rule_id}",
+            rule_id=most_specific_rule.rule_id,
+            vulnerability_id=vulnerability.id,
+            package_name=vulnerability.package_name,
+            violation_type="resolution_time_exceeded",
+            description=f"Vulnerability {vulnerability.id} in {vulnerability.package_name} "
+            f"has exceeded {most_specific_rule.max_resolution_time_hours}h resolution time limit "
+            f"(current age: {age_hours:.1f}h)",
+            severity=vulnerability.severity.value,
+            detected_at=datetime.now(),
+        )
 
     def _is_rule_applicable(
         self, rule: PolicyRule, vulnerability: Vulnerability
     ) -> bool:
         """Check if a policy rule applies to a vulnerability."""
-        # Check severity threshold
+        # Check severity threshold - rule applies if vulnerability severity meets or exceeds rule threshold
         severity_levels = {
             VulnerabilitySeverity.CRITICAL: 4,
             VulnerabilitySeverity.HIGH: 3,
@@ -263,9 +288,11 @@ class SecurityComplianceManager:
             VulnerabilitySeverity.UNKNOWN: 0,
         }
 
-        return severity_levels.get(vulnerability.severity, 0) >= severity_levels.get(
-            rule.severity_threshold, 0
-        )
+        vuln_level = severity_levels.get(vulnerability.severity, 0)
+        rule_threshold = severity_levels.get(rule.severity_threshold, 0)
+
+        # Rule applies if vulnerability severity is at or above the rule's threshold
+        return vuln_level >= rule_threshold
 
     def _check_scan_frequency_compliance(self) -> List[ComplianceViolation]:
         """Check compliance with scan frequency requirements."""

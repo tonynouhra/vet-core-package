@@ -174,9 +174,18 @@ class UpgradeValidator:
                 [sys.executable, "-m", "pip", "freeze"],
                 validate_first_arg=False,  # sys.executable is trusted
                 check=True,
+                capture_output=True,
+                text=True,
             )
 
-            requirements_file.write_text(result.stdout)
+            # Ensure we have package information in the backup
+            if result.stdout.strip():
+                requirements_file.write_text(result.stdout)
+            else:
+                # If no packages found, create empty requirements file
+                requirements_file.write_text("")
+                logger.warning("No packages found in current environment")
+
         except Exception as e:
             raise RuntimeError(f"Failed to create requirements backup: {e}")
 
@@ -207,6 +216,16 @@ class UpgradeValidator:
             if backup.pyproject_backup and backup.pyproject_backup.exists():
                 shutil.copy2(backup.pyproject_backup, self.pyproject_path)
 
+            # Check if requirements file has content
+            if not backup.requirements_file.exists():
+                logger.error("Requirements file does not exist in backup")
+                return False
+
+            requirements_content = backup.requirements_file.read_text().strip()
+            if not requirements_content:
+                logger.info("No packages to restore from backup (empty requirements)")
+                return True
+
             # Reinstall packages from requirements
             # Use --force-reinstall to handle potential conflicts during restoration
             # nosec B603: Using secure subprocess wrapper with validation
@@ -223,6 +242,8 @@ class UpgradeValidator:
                 ],
                 validate_first_arg=False,  # sys.executable is trusted
                 check=False,  # Don't raise exception on non-zero exit
+                capture_output=True,
+                text=True,
             )
 
             if result.returncode == 0:
@@ -232,7 +253,8 @@ class UpgradeValidator:
                 logger.error(
                     f"Failed to restore environment: pip install returned {result.returncode}"
                 )
-                logger.error(f"stderr: {result.stderr}")
+                if hasattr(result, "stderr") and result.stderr:
+                    logger.error(f"stderr: {result.stderr}")
                 return False
 
         except Exception as e:
@@ -287,12 +309,23 @@ class UpgradeValidator:
             result = secure_subprocess_run(
                 [sys.executable, "-m", "pip", "check"],
                 validate_first_arg=False,  # sys.executable is trusted
+                capture_output=True,
+                text=True,
             )
 
             if result.returncode != 0:
-                conflicts.append(
-                    f"Current environment has dependency issues: {result.stdout}"
+                # Parse pip check output to extract meaningful conflict information
+                output = (
+                    result.stdout.strip() if result.stdout else result.stderr.strip()
                 )
+                if output:
+                    conflicts.append(
+                        f"Current environment has dependency issues: {output}"
+                    )
+                else:
+                    conflicts.append(
+                        "Current environment has dependency issues (no details available)"
+                    )
 
         except Exception as e:
             conflicts.append(f"Error checking dependencies: {e}")

@@ -31,7 +31,7 @@ class TestVulnerabilityScanner:
         scanner = VulnerabilityScanner(timeout=600)
         assert scanner.timeout == 600
 
-    @patch("subprocess.run")
+    @patch("vet_core.security.scanner.secure_subprocess_run")
     def test_scan_dependencies_no_vulnerabilities(self, mock_run):
         """Test scanning when no vulnerabilities are found."""
         # Mock successful pip-audit run with no vulnerabilities
@@ -59,7 +59,7 @@ class TestVulnerabilityScanner:
         assert "--format=json" in call_args
         assert "--desc" in call_args
 
-    @patch("subprocess.run")
+    @patch("vet_core.security.scanner.secure_subprocess_run")
     def test_scan_dependencies_with_vulnerabilities(self, mock_run):
         """Test scanning when vulnerabilities are found."""
         # Mock pip-audit output with vulnerabilities
@@ -115,7 +115,7 @@ class TestVulnerabilityScanner:
         assert vuln2.fix_versions == ["65.5.1", "78.1.1"]
         assert vuln2.severity == VulnerabilitySeverity.HIGH
 
-    @patch("subprocess.run")
+    @patch("vet_core.security.scanner.secure_subprocess_run")
     def test_scan_dependencies_with_output_file(self, mock_run):
         """Test scanning with output file specified."""
         mock_result = Mock()
@@ -137,7 +137,7 @@ class TestVulnerabilityScanner:
         assert "--output" in call_args
         assert str(output_file) in call_args
 
-    @patch("subprocess.run")
+    @patch("vet_core.security.scanner.secure_subprocess_run")
     def test_scan_dependencies_without_descriptions(self, mock_run):
         """Test scanning without vulnerability descriptions."""
         mock_result = Mock()
@@ -157,7 +157,7 @@ class TestVulnerabilityScanner:
         call_args = mock_run.call_args[0][0]
         assert "--desc" not in call_args
 
-    @patch("subprocess.run")
+    @patch("vet_core.security.scanner.secure_subprocess_run")
     def test_scan_dependencies_timeout(self, mock_run):
         """Test scan timeout handling."""
         mock_run.side_effect = subprocess.TimeoutExpired("pip-audit", 300)
@@ -169,7 +169,7 @@ class TestVulnerabilityScanner:
 
         assert "timed out after 300 seconds" in str(exc_info.value)
 
-    @patch("subprocess.run")
+    @patch("vet_core.security.scanner.secure_subprocess_run")
     def test_scan_dependencies_command_failure(self, mock_run):
         """Test handling of pip-audit command failure."""
         mock_result = Mock()
@@ -185,7 +185,7 @@ class TestVulnerabilityScanner:
 
         assert "pip-audit failed" in str(exc_info.value)
 
-    @patch("subprocess.run")
+    @patch("vet_core.security.scanner.secure_subprocess_run")
     def test_scan_dependencies_invalid_json(self, mock_run):
         """Test handling of invalid JSON output."""
         mock_result = Mock()
@@ -318,7 +318,7 @@ class TestVulnerabilityScanner:
         assert vulnerabilities[0].id == "GOOD-001"
         assert vulnerabilities[1].id == "GOOD-002"
 
-    @patch("subprocess.run")
+    @patch("vet_core.security.scanner.secure_subprocess_run")
     def test_get_scanner_version_success(self, mock_run):
         """Test getting scanner version successfully."""
         mock_result = Mock()
@@ -330,11 +330,16 @@ class TestVulnerabilityScanner:
         version = scanner._get_scanner_version()
 
         assert version == "pip-audit 2.6.0"
-        mock_run.assert_called_once_with(
-            ["pip-audit", "--version"], capture_output=True, text=True, timeout=10
-        )
+        # Verify the secure_subprocess_run was called with correct arguments
+        mock_run.assert_called_once()
+        call_args = mock_run.call_args[0][0]
+        assert call_args == ["pip-audit", "--version"]
+        call_kwargs = mock_run.call_args[1]
+        assert call_kwargs["capture_output"] == True
+        assert call_kwargs["text"] == True
+        assert call_kwargs["timeout"] == 10
 
-    @patch("subprocess.run")
+    @patch("vet_core.security.scanner.secure_subprocess_run")
     def test_get_scanner_version_failure(self, mock_run):
         """Test handling scanner version command failure."""
         mock_run.side_effect = subprocess.TimeoutExpired("pip-audit", 10)

@@ -554,7 +554,7 @@ class TestPetUpdate:
 
         # Only update status
         pet_update = PetUpdate(status=PetStatus.INACTIVE)
-        assert pet_update.status == PetStatus.INACTIVE
+        assert pet_update.status == PetStatus.INACTIVE.value
 
     def test_empty_update_validation(self):
         """Test that empty update is rejected."""

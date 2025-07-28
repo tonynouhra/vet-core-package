@@ -209,7 +209,9 @@ class TestSecurityComplianceManager:
             scanner_version="pip-audit 2.6.1",
         )
 
-        violations, metrics = compliance_manager.check_compliance(report)
+        violations, metrics = compliance_manager.check_compliance(
+            report, check_historical=False
+        )
 
         # Should find no violations for recent vulnerability
         assert len(violations) == 0

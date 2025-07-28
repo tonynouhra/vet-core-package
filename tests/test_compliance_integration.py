@@ -103,7 +103,7 @@ class TestComplianceIntegration:
                 cvss_score=7.8,
                 description="High severity vulnerability in authentication module",
                 published_date=datetime.now() - timedelta(days=1),
-                discovered_date=datetime.now() - timedelta(hours=50),  # Over 72h old
+                discovered_date=datetime.now() - timedelta(hours=80),  # Over 72h old
             ),
             Vulnerability(
                 id="MEDIUM-001",
@@ -463,11 +463,15 @@ class TestComplianceIntegration:
     ):
         """Test comprehensive compliance metrics calculation."""
         audit_trail = compliance_system["audit_trail"]
+        compliance_manager = compliance_system["compliance_manager"]
 
         # Create comprehensive audit history
         self._create_comprehensive_audit_history(audit_trail, sample_security_report)
 
-        # Calculate compliance metrics
+        # Run compliance check to generate policy violations
+        violations, _ = compliance_manager.check_compliance(sample_security_report)
+
+        # Calculate compliance metrics after violations are logged
         metrics = audit_trail.calculate_compliance_metrics(sample_security_report)
 
         # Verify basic metrics

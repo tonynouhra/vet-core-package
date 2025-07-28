@@ -252,11 +252,25 @@ class ConnectionException(DatabaseException):
         """Remove credentials from database URL for logging."""
         try:
             parsed = urlparse(url)
+
+            # Check if the URL was properly parsed (has a scheme or netloc)
+            if not parsed.scheme and not parsed.netloc:
+                return "[URL_PARSE_ERROR]"
+
+            # Handle case where hostname or port might be None
+            if parsed.hostname is None:
+                return "[URL_PARSE_ERROR]"
+
             # Remove username and password
-            sanitized = parsed._replace(netloc=f"{parsed.hostname}:{parsed.port}")
+            if parsed.port:
+                sanitized_netloc = f"{parsed.hostname}:{parsed.port}"
+            else:
+                sanitized_netloc = parsed.hostname
+
+            sanitized = parsed._replace(netloc=sanitized_netloc)
             return urlunparse(sanitized)
-        except (ValueError, AttributeError) as e:
-            return f"[URL_PARSE_ERROR: {e}]"
+        except (ValueError, AttributeError):
+            return "[URL_PARSE_ERROR]"
 
     def is_retryable(self) -> bool:
         """
@@ -400,6 +414,7 @@ class ValidationException(VetCoreException):
         field: Optional[str] = None,
         value: Optional[Any] = None,
         validation_errors: Optional[Dict[str, Any]] = None,
+        details: Optional[Dict[str, Any]] = None,
     ):
         """
         Initialize validation exception.
@@ -409,19 +424,24 @@ class ValidationException(VetCoreException):
             field: Field that failed validation
             value: Value that failed validation
             validation_errors: Detailed validation errors
+            details: Additional details dictionary
         """
-        details: Dict[str, Any] = {}
+        exception_details: Dict[str, Any] = {}
         if field:
-            details["field"] = field
+            exception_details["field"] = field
         if value is not None:
-            details["value"] = str(value)
+            exception_details["value"] = str(value)
         if validation_errors:
-            details["validation_errors"] = validation_errors
+            exception_details["validation_errors"] = validation_errors
+
+        # Merge additional details if provided
+        if details:
+            exception_details.update(details)
 
         super().__init__(
             message=message,
             error_code="VALIDATION_ERROR",
-            details=details,
+            details=exception_details,
         )
 
 

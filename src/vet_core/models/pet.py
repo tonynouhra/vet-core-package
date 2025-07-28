@@ -523,9 +523,7 @@ class Pet(BaseModel):
                 if vaccination_date_str:
                     try:
                         # Parse the date string to a date object for proper comparison
-                        vaccination_date = datetime.fromisoformat(
-                            vaccination_date_str
-                        ).date()
+                        vaccination_date = date.fromisoformat(vaccination_date_str)
                         if (
                             latest_vaccination_date is None
                             or vaccination_date > latest_vaccination_date
@@ -575,16 +573,10 @@ class Pet(BaseModel):
 
         record = {
             "vaccine_type": vaccine_type,
-            "date": datetime.combine(
-                date_administered, datetime.min.time()
-            ).isoformat(),
+            "date": date_administered.isoformat(),
             "veterinarian": veterinarian,
             "batch_number": batch_number,
-            "next_due_date": (
-                datetime.combine(next_due_date, datetime.min.time()).isoformat()
-                if next_due_date
-                else None
-            ),
+            "next_due_date": (next_due_date.isoformat() if next_due_date else None),
             "notes": notes,
             "recorded_at": datetime.utcnow().isoformat(),
         }

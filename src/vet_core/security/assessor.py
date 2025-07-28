@@ -827,6 +827,10 @@ class RiskAssessor:
         if severity == VulnerabilitySeverity.CRITICAL:
             return "immediate"
 
+        # High severity vulnerabilities with high risk scores should be immediate
+        if severity == VulnerabilitySeverity.HIGH and risk_score >= 8.5:
+            return "immediate"
+
         # Use configurable risk score thresholds
         for priority in ["immediate", "urgent", "scheduled", "planned"]:
             if risk_score >= self.risk_thresholds[priority]:
@@ -938,10 +942,15 @@ class RiskAssessor:
 
         base_impact = severity_impact[vulnerability.severity]
 
-        # Adjust based on package criticality
+        # Only upgrade to critical for CRITICAL severity vulnerabilities with very high package criticality
         package_criticality = impact_factors.get("package_criticality", 0.5)
-        if package_criticality > 0.8:
-            # Upgrade impact level for critical packages
+        if (
+            vulnerability.severity == VulnerabilitySeverity.CRITICAL
+            and package_criticality > 0.9
+        ):
+            base_impact = "critical"
+        # Upgrade impact level for highly critical packages, but only by one level
+        elif package_criticality > 0.8 and base_impact in ["low", "medium"]:
             impact_levels = ["low", "medium", "high", "critical"]
             current_index = impact_levels.index(base_impact)
             if current_index < len(impact_levels) - 1:

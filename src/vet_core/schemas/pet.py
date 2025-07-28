@@ -608,7 +608,7 @@ class PetUpdate(BaseModel):
     def validate_at_least_one_field(self) -> "PetUpdate":
         """Ensure at least one field is provided for update."""
         # Get all field names except the model_config
-        field_names = [name for name in self.model_fields.keys()]
+        field_names = [name for name in self.__class__.model_fields.keys()]
         field_values = [getattr(self, name) for name in field_names]
 
         if not any(value is not None for value in field_values):
