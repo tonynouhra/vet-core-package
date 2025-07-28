@@ -245,10 +245,10 @@ jobs:
 
     - name: Run basic import tests
       run: |
-        python -c "import vet_core; print('✅ Package imports successfully')"
-        python -c "from vet_core.models import User, Pet, Appointment; print('✅ Models import successfully')"
-        python -c "from vet_core.database import get_engine; print('✅ Database utilities import successfully')"
-        python -c "from vet_core.schemas import UserCreate; print('✅ Schemas import successfully')"
+        python -c "import vet_core; print('Package imports successfully')"
+        python -c "from vet_core.models import User, Pet, Appointment; print('Models import successfully')"
+        python -c "from vet_core.database import get_engine; print('Database utilities import successfully')"
+        python -c "from vet_core.schemas import UserCreate; print('Schemas import successfully')"
 
     - name: Run unit tests (no database)
       run: |
