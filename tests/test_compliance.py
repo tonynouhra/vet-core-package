@@ -10,6 +10,7 @@ This module tests the comprehensive compliance system including:
 
 import gc
 import json
+import os
 import platform
 import tempfile
 import time
