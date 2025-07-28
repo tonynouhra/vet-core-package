@@ -11,9 +11,12 @@ Requirements addressed:
 - 4.3: Compliance report generation with vulnerability management evidence
 - 4.4: Evidence of proactive security management practices
 """
-
+import gc
 import json
+import platform
+import shutil
 import tempfile
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -48,9 +51,26 @@ class TestComplianceIntegration:
     @pytest.fixture
     def temp_workspace(self):
         """Create temporary workspace for testing."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            workspace = Path(temp_dir)
-            yield workspace
+        temp_dir = tempfile.mkdtemp()  # Create directory manually
+
+        yield Path(temp_dir)
+
+        # Cleanup with Windows compatibility
+        gc.collect()  # Force garbage collection
+        time.sleep(0.1)  # Brief pause
+
+        if platform.system() == "Windows":
+            # Windows retry logic
+            for i in range(5):
+                try:
+                    shutil.rmtree(temp_dir)
+                    break
+                except (PermissionError, OSError):
+                    if i < 4:
+                        time.sleep(0.2)
+                    else:
+                        # Final attempt with ignore_errors
+                        shutil.rmtree(temp_dir, ignore_errors=True)
 
     @pytest.fixture
     def audit_trail_system(self, temp_workspace):

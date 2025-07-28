@@ -8,13 +8,13 @@ This module tests the comprehensive audit trail system including:
 - Database operations
 """
 
+import gc
 import json
+import os
+import platform
 import sqlite3
 import tempfile
-import os
-import gc
 import time
-import platform
 from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -42,48 +42,30 @@ class TestSecurityAuditTrail:
     @pytest.fixture
     def temp_db_path(self):
         """Create temporary database path for testing."""
-        # Create temporary file and get the path
-        fd, temp_path = tempfile.mkstemp(suffix=".db")
-        db_path = Path(temp_path)
-
-        # Close the file descriptor immediately since we just need the path
-        os.close(fd)
+        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
+            db_path = Path(f.name)
 
         yield db_path
 
-        # Windows-safe cleanup
-        try:
-            # Force garbage collection to close any open handles
-            gc.collect()
+        # Cleanup with Windows compatibility
+        gc.collect()  # Force garbage collection
 
-            # Additional cleanup for SQLite connections
-            if hasattr(sqlite3, "sqlite_version_info"):
-                # Force close any lingering SQLite connections
-                sqlite3.sqlite_version_info
-
-            if platform.system() == "Windows":
-                # Retry logic for Windows file locking issues
-                for attempt in range(10):  # Try up to 10 times
-                    try:
-                        if db_path.exists():
-                            db_path.unlink()
-                        break
-                    except PermissionError:
-                        if attempt < 9:  # Don't sleep on last attempt
-                            time.sleep(0.2)  # Wait 200ms before retry
-                        else:
-                            # If all retries fail, log warning instead of raising
-                            print(
-                                f"Warning: Could not delete temporary database file {db_path}"
-                            )
-            else:
-                # Unix systems - simple deletion
-                if db_path.exists():
-                    db_path.unlink()
-        except (PermissionError, OSError) as e:
-            # On Windows, sometimes files can't be deleted immediately
-            # This is acceptable for temporary test files
-            print(f"Warning: Could not clean up temporary database file {db_path}: {e}")
+        if platform.system() == "Windows":
+            # Windows retry logic
+            for i in range(5):
+                try:
+                    if db_path.exists():
+                        db_path.unlink()
+                    break
+                except PermissionError:
+                    if i < 4:
+                        time.sleep(0.2)
+                    else:
+                        print(f"Warning: Could not delete {db_path}")
+        else:
+            # Unix - simple deletion
+            if db_path.exists():
+                db_path.unlink()
 
     @pytest.fixture
     def temp_log_path(self):
@@ -113,9 +95,7 @@ class TestSecurityAuditTrail:
                         if attempt < 9:
                             time.sleep(0.2)
                         else:
-                            print(
-                                f"Warning: Could not delete temporary log file {log_path}"
-                            )
+                            print(f"Warning: Could not delete temporary log file {log_path}")
             else:
                 if log_path.exists():
                     log_path.unlink()
@@ -134,7 +114,7 @@ class TestSecurityAuditTrail:
         # Explicit cleanup to ensure database connections are closed
         try:
             # Close any open database connections
-            if hasattr(trail, "_db_connection"):
+            if hasattr(trail, '_db_connection'):
                 trail._db_connection.close()
 
             # Force garbage collection
