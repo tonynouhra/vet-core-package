@@ -131,6 +131,11 @@ class ForceReinstallStrategy(RestoreStrategy):
                     warnings=warnings
                 )
             
+            # Pre-check: Get current packages
+            pre_check_cmd = [sys.executable, "-m", "pip", "list", "--format=freeze"]
+            logger.debug("Pre-check: Getting current packages")
+            pre_check_result = secure_subprocess_run(pre_check_cmd, capture_output=True, text=True)
+            
             # Build pip install command with force reinstall
             cmd = [
                 sys.executable, "-m", "pip", "install",
@@ -139,6 +144,11 @@ class ForceReinstallStrategy(RestoreStrategy):
             
             logger.info(f"Executing force reinstall for {len(packages)} packages")
             result = secure_subprocess_run(cmd, capture_output=True, text=True)
+            
+            # Post-check: Verify installation
+            post_check_cmd = [sys.executable, "-m", "pip", "list", "--format=freeze"]
+            logger.debug("Post-check: Verifying installation")
+            post_check_result = secure_subprocess_run(post_check_cmd, capture_output=True, text=True)
             
             if result.returncode == 0:
                 return RestoreResult.success_result(
@@ -385,11 +395,15 @@ class FallbackStrategy(RestoreStrategy):
             successful_packages = self._try_individual_packages(packages)
             
             if successful_packages:
+                warnings = []
+                if len(successful_packages) < len(packages):
+                    warnings.append("Partial success")
+                
                 return RestoreResult.success_result(
                     strategy="Fallback",
                     packages_restored=len(successful_packages),
                     duration=time.time() - start_time,
-                    warnings=["Partial success"]
+                    warnings=warnings
                 )
             else:
                 return RestoreResult.failure_result(

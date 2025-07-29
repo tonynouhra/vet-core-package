@@ -665,7 +665,7 @@ class SecurityMetricsAnalyzer:
             if record.current_status not in [
                 VulnerabilityStatus.RESOLVED,
                 VulnerabilityStatus.CLOSED,
-                VulnerabilityStatus.FALSE_POSITIVE,
+                VulnerabilityStatus.IGNORED,
             ]:
                 risk_score += severity_weight
 

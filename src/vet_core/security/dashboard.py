@@ -437,10 +437,9 @@ class VulnerabilityDashboard:
         self, output_file: Optional[Path], format_type: str
     ) -> None:
         """Generate compliance report."""
-        if not self.current_report:
-            print("❌ No scan data available. Run 'scan' command first.")
-            return
-
+        # Compliance reports can be generated from audit trail data
+        # without requiring current scan data
+        
         # Call the compliance manager to generate compliance report
         compliance_report = self.compliance_manager.generate_compliance_report(
             ComplianceFramework.NIST_CSF
@@ -907,6 +906,11 @@ class VulnerabilityDashboard:
             progress_metrics = summary.get("progress_metrics", {}) if hasattr(summary, 'get') else {}
             
         completion_percentage = progress_metrics.get("completion_rate", 0.0) if hasattr(progress_metrics, 'get') else 0.0
+        # Ensure completion_percentage is a number for formatting
+        try:
+            completion_percentage = float(completion_percentage) if completion_percentage is not None else 0.0
+        except (TypeError, ValueError):
+            completion_percentage = 0.0
         print(f"Completion: {completion_percentage:.1f}%")
 
     def show_overdue_vulnerabilities(self) -> None:
