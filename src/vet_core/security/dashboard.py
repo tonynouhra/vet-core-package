@@ -439,7 +439,7 @@ class VulnerabilityDashboard:
         """Generate compliance report."""
         # Compliance reports can be generated from audit trail data
         # without requiring current scan data
-        
+
         # Call the compliance manager to generate compliance report
         compliance_report = self.compliance_manager.generate_compliance_report(
             ComplianceFramework.NIST_CSF
@@ -857,42 +857,52 @@ class VulnerabilityDashboard:
 
         print(f"\n📊 Progress Summary")
         print("=" * 60)
-        
+
         # Handle both dictionary and Mock object cases
-        if hasattr(summary, 'total_vulnerabilities'):
+        if hasattr(summary, "total_vulnerabilities"):
             total_vulnerabilities = summary.total_vulnerabilities
         else:
-            total_vulnerabilities = summary.get("total_vulnerabilities", 0) if hasattr(summary, 'get') else 0
-        
+            total_vulnerabilities = (
+                summary.get("total_vulnerabilities", 0)
+                if hasattr(summary, "get")
+                else 0
+            )
+
         print(f"Total Vulnerabilities: {total_vulnerabilities}")
 
         # Extract status counts from status_distribution
-        if hasattr(summary, 'status_distribution'):
-            status_dist = summary.status_distribution if hasattr(summary.status_distribution, 'get') else {}
+        if hasattr(summary, "status_distribution"):
+            status_dist = (
+                summary.status_distribution
+                if hasattr(summary.status_distribution, "get")
+                else {}
+            )
         else:
-            status_dist = summary.get("status_distribution", {}) if hasattr(summary, 'get') else {}
-            
+            status_dist = (
+                summary.get("status_distribution", {})
+                if hasattr(summary, "get")
+                else {}
+            )
+
         # Safely get counts and ensure they are integers
         def safe_get_count(dist, key):
-            if hasattr(dist, 'get'):
+            if hasattr(dist, "get"):
                 value = dist.get(key, 0)
                 return value if isinstance(value, (int, float)) else 0
             return 0
-            
+
         resolved_count = (
-            safe_get_count(status_dist, "resolved") +
-            safe_get_count(status_dist, "verified") +
-            safe_get_count(status_dist, "closed")
+            safe_get_count(status_dist, "resolved")
+            + safe_get_count(status_dist, "verified")
+            + safe_get_count(status_dist, "closed")
         )
-        
-        in_progress_count = (
-            safe_get_count(status_dist, "in_progress") +
-            safe_get_count(status_dist, "testing")
+
+        in_progress_count = safe_get_count(status_dist, "in_progress") + safe_get_count(
+            status_dist, "testing"
         )
-        
-        new_count = (
-            safe_get_count(status_dist, "new") +
-            safe_get_count(status_dist, "detected")
+
+        new_count = safe_get_count(status_dist, "new") + safe_get_count(
+            status_dist, "detected"
         )
 
         print(f"Resolved: {resolved_count}")
@@ -900,15 +910,29 @@ class VulnerabilityDashboard:
         print(f"New: {new_count}")
 
         # Extract completion percentage from progress_metrics
-        if hasattr(summary, 'progress_metrics'):
-            progress_metrics = summary.progress_metrics if hasattr(summary.progress_metrics, 'get') else {}
+        if hasattr(summary, "progress_metrics"):
+            progress_metrics = (
+                summary.progress_metrics
+                if hasattr(summary.progress_metrics, "get")
+                else {}
+            )
         else:
-            progress_metrics = summary.get("progress_metrics", {}) if hasattr(summary, 'get') else {}
-            
-        completion_percentage = progress_metrics.get("completion_rate", 0.0) if hasattr(progress_metrics, 'get') else 0.0
+            progress_metrics = (
+                summary.get("progress_metrics", {}) if hasattr(summary, "get") else {}
+            )
+
+        completion_percentage = (
+            progress_metrics.get("completion_rate", 0.0)
+            if hasattr(progress_metrics, "get")
+            else 0.0
+        )
         # Ensure completion_percentage is a number for formatting
         try:
-            completion_percentage = float(completion_percentage) if completion_percentage is not None else 0.0
+            completion_percentage = (
+                float(completion_percentage)
+                if completion_percentage is not None
+                else 0.0
+            )
         except (TypeError, ValueError):
             completion_percentage = 0.0
         print(f"Completion: {completion_percentage:.1f}%")

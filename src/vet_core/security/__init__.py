@@ -97,7 +97,7 @@ __all__ = [
     "get_config",
     "validate_config",
     "ErrorAnalysis",
-    "ErrorAnalyzer", 
+    "ErrorAnalyzer",
     "ErrorCategory",
     "RestoreStrategy",
     "ForceReinstallStrategy",

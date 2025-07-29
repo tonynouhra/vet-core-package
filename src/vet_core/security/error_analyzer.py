@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 class ErrorCategory(Enum):
     """Categories of errors that can occur during package restoration."""
-    
+
     UNKNOWN = "unknown"
     NETWORK_ERROR = "network_error"
     PERMISSION_ERROR = "permission_error"
@@ -34,7 +34,7 @@ class ErrorCategory(Enum):
 @dataclass
 class ErrorAnalysis:
     """Analysis results for a restoration error."""
-    
+
     category: ErrorCategory
     confidence: float
     description: str
@@ -44,7 +44,7 @@ class ErrorAnalysis:
     is_recoverable: bool = True
     error_message: str = ""
     recovery_suggestions: List[str] = field(default_factory=list)
-    
+
     def __post_init__(self):
         """Initialize computed properties after dataclass initialization."""
         if not self.recovery_suggestions:
@@ -53,7 +53,7 @@ class ErrorAnalysis:
 
 class ErrorAnalyzer:
     """Analyzes restoration errors and provides categorization and recovery suggestions."""
-    
+
     def __init__(self):
         """Initialize the error analyzer with pattern matching rules."""
         self._error_patterns = {
@@ -125,7 +125,7 @@ class ErrorAnalyzer:
                 r"command.*not.*found",
             ],
         }
-        
+
         self._recovery_suggestions = {
             ErrorCategory.NETWORK_ERROR: [
                 "Check your internet connection",
@@ -188,14 +188,14 @@ class ErrorAnalyzer:
                 "Seek help from community or documentation",
             ],
         }
-    
+
     def analyze(self, result: "RestoreResult") -> ErrorAnalysis:
         """
         Analyze a restoration result and categorize any errors.
-        
+
         Args:
             result: RestoreResult instance to analyze
-            
+
         Returns:
             ErrorAnalysis with categorized error information
         """
@@ -208,21 +208,21 @@ class ErrorAnalyzer:
                 suggested_actions=["No action needed - operation succeeded"],
                 is_recoverable=True,
             )
-        
+
         error_message = result.error_message or ""
         category, confidence = self._categorize_error(error_message)
-        
+
         description = self._generate_description(category, error_message)
         suggested_actions = self._recovery_suggestions.get(category, [])
         affected_packages = result.packages_failed or []
         is_recoverable = self._determine_recoverability(category)
-        
+
         technical_details = {
             "strategy": result.strategy_used,
             "duration": result.duration,
             "packages_failed_count": len(affected_packages),
         }
-        
+
         return ErrorAnalysis(
             category=category,
             confidence=confidence,
@@ -233,22 +233,22 @@ class ErrorAnalyzer:
             technical_details=technical_details,
             is_recoverable=is_recoverable,
         )
-    
+
     def _categorize_error(self, error_message: str) -> tuple[ErrorCategory, float]:
         """
         Categorize an error message and return confidence level.
-        
+
         Args:
             error_message: Error message to categorize
-            
+
         Returns:
             Tuple of (ErrorCategory, confidence_level)
         """
         if not error_message:
             return ErrorCategory.UNKNOWN, 0.1
-        
+
         error_lower = error_message.lower()
-        
+
         # Define confidence levels for each category
         confidence_levels = {
             ErrorCategory.NETWORK_ERROR: 0.9,
@@ -262,11 +262,14 @@ class ErrorAnalyzer:
             ErrorCategory.SYSTEM_ERROR: 0.6,
             ErrorCategory.UNKNOWN: 0.1,
         }
-        
+
         # Check disk space errors first with highest priority
         if re.search(r"no\s+space\s+left\s+on\s+device", error_lower, re.IGNORECASE):
-            return ErrorCategory.DISK_SPACE_ERROR, confidence_levels[ErrorCategory.DISK_SPACE_ERROR]
-        
+            return (
+                ErrorCategory.DISK_SPACE_ERROR,
+                confidence_levels[ErrorCategory.DISK_SPACE_ERROR],
+            )
+
         for category, patterns in self._error_patterns.items():
             # Skip disk space since we already checked it above
             if category == ErrorCategory.DISK_SPACE_ERROR:
@@ -274,23 +277,23 @@ class ErrorAnalyzer:
             for pattern in patterns:
                 if re.search(pattern, error_lower, re.IGNORECASE):
                     return category, confidence_levels[category]
-        
+
         # If no patterns matched, return unknown with low confidence
         return ErrorCategory.UNKNOWN, confidence_levels[ErrorCategory.UNKNOWN]
-    
+
     def get_recovery_suggestions(self, analysis: ErrorAnalysis) -> List[str]:
         """
         Get enhanced recovery suggestions for an error analysis.
-        
+
         Args:
             analysis: ErrorAnalysis object to get suggestions for
-            
+
         Returns:
             List of enhanced recovery suggestions
         """
         # Start with base suggestions from the analysis
         suggestions = list(analysis.suggested_actions)
-        
+
         # Add category-specific enhanced suggestions
         enhanced_suggestions = {
             ErrorCategory.NETWORK_ERROR: [
@@ -339,11 +342,11 @@ class ErrorAnalyzer:
                 "Consider restarting the system if necessary",
             ],
         }
-        
+
         # Add enhanced suggestions for this category
         category_suggestions = enhanced_suggestions.get(analysis.category, [])
         suggestions.extend(category_suggestions)
-        
+
         # Remove duplicates while preserving order
         seen = set()
         unique_suggestions = []
@@ -351,17 +354,17 @@ class ErrorAnalyzer:
             if suggestion not in seen:
                 seen.add(suggestion)
                 unique_suggestions.append(suggestion)
-        
+
         return unique_suggestions
-    
+
     def _generate_description(self, category: ErrorCategory, error_message: str) -> str:
         """
         Generate a human-readable description for the error category.
-        
+
         Args:
             category: Error category
             error_message: Original error message
-            
+
         Returns:
             Human-readable description
         """
@@ -377,59 +380,61 @@ class ErrorAnalyzer:
             ErrorCategory.SYSTEM_ERROR: "System-level error occurred during the operation",
             ErrorCategory.UNKNOWN: "unrecognized error pattern",
         }
-        
+
         return descriptions.get(category, "An error occurred during the operation")
-    
+
     def _determine_recoverability(self, category: ErrorCategory) -> bool:
         """
         Determine if an error category is generally recoverable.
-        
+
         Args:
             category: Error category to evaluate
-            
+
         Returns:
             True if the error is generally recoverable
         """
         # Python version incompatibility may require environment changes
         if category == ErrorCategory.PYTHON_VERSION_INCOMPATIBLE:
             return False
-        
+
         # Most other errors are recoverable with appropriate actions
         return True
-    
+
     def analyze_error(self, result: "RestoreResult") -> ErrorAnalysis:
         """
         Analyze a restoration result and categorize any errors.
         This is an alias for the analyze method to maintain compatibility.
-        
+
         Args:
             result: RestoreResult instance to analyze
-            
+
         Returns:
             ErrorAnalysis with categorized error information
         """
         return self.analyze(result)
-    
-    def analyze_multiple_failures(self, results: List["RestoreResult"]) -> Dict[ErrorCategory, List[ErrorAnalysis]]:
+
+    def analyze_multiple_failures(
+        self, results: List["RestoreResult"]
+    ) -> Dict[ErrorCategory, List[ErrorAnalysis]]:
         """
         Analyze multiple restoration failures and categorize them.
-        
+
         Args:
             results: List of RestoreResult instances to analyze
-            
+
         Returns:
             Dictionary mapping error categories to lists of error analyses
         """
         categorized = {}
-        
+
         for result in results:
             if not result.success:
                 analysis = self.analyze(result)
                 category = analysis.category
-                
+
                 if category not in categorized:
                     categorized[category] = []
-                
+
                 categorized[category].append(analysis)
-        
+
         return categorized

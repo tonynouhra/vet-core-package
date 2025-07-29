@@ -533,7 +533,7 @@ class TestFallbackStrategy(unittest.TestCase):
 
         # Track call count to distinguish between calls
         call_count = 0
-        
+
         # Setup mock subprocess results
         def subprocess_side_effect(*args, **kwargs):
             nonlocal call_count
@@ -542,7 +542,7 @@ class TestFallbackStrategy(unittest.TestCase):
             mock_result = Mock()
 
             # First call: standard install - should fail
-            # Second call: force reinstall - should fail  
+            # Second call: force reinstall - should fail
             # Third call: individual package install - should succeed
             if call_count <= 2:
                 mock_result.returncode = 1
