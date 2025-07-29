@@ -136,11 +136,11 @@ class ForceReinstallStrategy(RestoreStrategy):
             logger.debug("Pre-check: Getting current packages")
             pre_check_result = secure_subprocess_run(pre_check_cmd, capture_output=True, text=True)
             
-            # Build pip install command with force reinstall
+            # Build pip install command with force reinstall using requirements file
             cmd = [
                 sys.executable, "-m", "pip", "install",
-                "--force-reinstall", "--no-deps"
-            ] + packages
+                "--force-reinstall", "--no-deps", "-r", str(backup.requirements_file)
+            ]
             
             logger.info(f"Executing force reinstall for {len(packages)} packages")
             result = secure_subprocess_run(cmd, capture_output=True, text=True)
@@ -395,9 +395,9 @@ class FallbackStrategy(RestoreStrategy):
             successful_packages = self._try_individual_packages(packages)
             
             if successful_packages:
-                warnings = []
-                if len(successful_packages) < len(packages):
-                    warnings.append("Partial success")
+                # Always indicate partial success when falling back to individual packages
+                # since batch installation failed
+                warnings = ["Partial success"]
                 
                 return RestoreResult.success_result(
                     strategy="Fallback",

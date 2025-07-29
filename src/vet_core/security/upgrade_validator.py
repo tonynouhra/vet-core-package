@@ -727,11 +727,7 @@ class RestoreLogger:
             )
             if result.packages_failed:
                 failed_count = len(result.packages_failed)
-                # Log the count first
-                self.logger.error(
-                    f"[{op_id}] Failed packages ({failed_count} total)"
-                )
-                # Then log the package details
+                # Log the package details (combine count and details in one call)
                 if failed_count <= 5:
                     self.logger.error(
                         f"[{op_id}] Failed packages: {', '.join(result.packages_failed)}"
