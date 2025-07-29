@@ -729,7 +729,7 @@ class RestoreLogger:
                 failed_count = len(result.packages_failed)
                 if failed_count <= 5:
                     self.logger.error(
-                        f"[{op_id}] Failed packages: {', '.join(result.packages_failed)}"
+                        f"[{op_id}] Failed packages ({failed_count} total): {', '.join(result.packages_failed)}"
                     )
                 else:
                     self.logger.error(
@@ -761,14 +761,21 @@ class RestoreLogger:
         )
 
         if result.success:
-            self.logger.info(
-                f"[{op_id}] Environment restoration completed successfully using {result.strategy_used} strategy "
-                f"in {total_duration:.2f}s"
-            )
+            message = f"[{op_id}] Environment restoration completed successfully using {result.strategy_used} strategy"
+            if result.packages_restored > 0:
+                message += f" - {result.packages_restored} packages restored"
+            if result.warnings:
+                message += f" - {len(result.warnings)} warnings"
+            message += f" in {total_duration:.2f}s"
+            
+            self.logger.info(message)
         else:
-            self.logger.error(
-                f"[{op_id}] Environment restoration failed after {total_duration:.2f}s: {result.error_message}"
-            )
+            message = f"[{op_id}] Environment restoration failed after {total_duration:.2f}s"
+            if result.packages_failed:
+                message += f" - {len(result.packages_failed)} packages failed"
+            message += f": {result.error_message}"
+            
+            self.logger.error(message)
 
         # Log operation context for debugging
         self.logger.debug(f"[{op_id}] Operation context: {self._operation_context}")

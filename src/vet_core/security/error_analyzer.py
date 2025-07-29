@@ -246,23 +246,28 @@ class ErrorAnalyzer:
             return ErrorCategory.UNKNOWN, 0.5
         
         error_lower = error_message.lower()
-        best_match = ErrorCategory.UNKNOWN
-        highest_confidence = 0.0
+        
+        # Define confidence levels for each category
+        confidence_levels = {
+            ErrorCategory.NETWORK_ERROR: 0.9,
+            ErrorCategory.PERMISSION_ERROR: 0.95,
+            ErrorCategory.PACKAGE_NOT_FOUND: 0.85,
+            ErrorCategory.DEPENDENCY_CONFLICT: 0.8,
+            ErrorCategory.DISK_SPACE_ERROR: 0.95,
+            ErrorCategory.PYTHON_VERSION_INCOMPATIBLE: 0.9,
+            ErrorCategory.CORRUPTED_PACKAGE: 0.85,
+            ErrorCategory.BACKUP_INVALID: 0.9,
+            ErrorCategory.SYSTEM_ERROR: 0.6,
+            ErrorCategory.UNKNOWN: 0.1,
+        }
         
         for category, patterns in self._error_patterns.items():
             for pattern in patterns:
                 if re.search(pattern, error_lower, re.IGNORECASE):
-                    # Calculate confidence based on pattern specificity
-                    confidence = min(0.95, 0.6 + (len(pattern) / 100))
-                    if confidence > highest_confidence:
-                        highest_confidence = confidence
-                        best_match = category
+                    return category, confidence_levels[category]
         
         # If no patterns matched, return unknown with low confidence
-        if highest_confidence == 0.0:
-            highest_confidence = 0.3
-        
-        return best_match, highest_confidence
+        return ErrorCategory.UNKNOWN, confidence_levels[ErrorCategory.UNKNOWN]
     
     def get_recovery_suggestions(self, analysis: ErrorAnalysis) -> List[str]:
         """
@@ -382,3 +387,40 @@ class ErrorAnalyzer:
         
         # Most other errors are recoverable with appropriate actions
         return True
+    
+    def analyze_error(self, result: RestoreResult) -> ErrorAnalysis:
+        """
+        Analyze a restoration result and categorize any errors.
+        This is an alias for the analyze method to maintain compatibility.
+        
+        Args:
+            result: RestoreResult instance to analyze
+            
+        Returns:
+            ErrorAnalysis with categorized error information
+        """
+        return self.analyze(result)
+    
+    def analyze_multiple_failures(self, results: List[RestoreResult]) -> Dict[ErrorCategory, List[ErrorAnalysis]]:
+        """
+        Analyze multiple restoration failures and categorize them.
+        
+        Args:
+            results: List of RestoreResult instances to analyze
+            
+        Returns:
+            Dictionary mapping error categories to lists of error analyses
+        """
+        categorized = {}
+        
+        for result in results:
+            if not result.success:
+                analysis = self.analyze(result)
+                category = analysis.category
+                
+                if category not in categorized:
+                    categorized[category] = []
+                
+                categorized[category].append(analysis)
+        
+        return categorized

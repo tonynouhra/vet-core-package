@@ -113,10 +113,14 @@ class ForceReinstallStrategy(RestoreStrategy):
             packages = self._get_packages_from_backup(backup)
             
             if not packages:
+                warnings = []
+                if backup.is_empty_environment:
+                    warnings.append("Environment restored to empty state - no packages were installed")
                 return RestoreResult.success_result(
                     strategy="ForceReinstall",
                     packages_restored=0,
-                    duration=time.time() - start_time
+                    duration=time.time() - start_time,
+                    warnings=warnings
                 )
             
             # Build pip install command with force reinstall
@@ -196,10 +200,14 @@ class CleanInstallStrategy(RestoreStrategy):
             packages = self._get_packages_from_backup(backup)
             
             if not packages:
+                warnings = []
+                if backup.is_empty_environment:
+                    warnings.append("Environment restored to empty state - no packages were installed")
                 return RestoreResult.success_result(
                     strategy="CleanInstall",
                     packages_restored=0,
-                    duration=time.time() - start_time
+                    duration=time.time() - start_time,
+                    warnings=warnings
                 )
             
             cmd = [sys.executable, "-m", "pip", "install"] + packages
@@ -312,10 +320,12 @@ class FallbackStrategy(RestoreStrategy):
             packages = self._get_packages_from_backup(backup)
             
             if not packages:
+                warnings = ["Fallback strategy completed - no packages to restore"]
                 return RestoreResult.success_result(
                     strategy="Fallback",
                     packages_restored=0,
-                    duration=time.time() - start_time
+                    duration=time.time() - start_time,
+                    warnings=warnings
                 )
             
             # Try standard install first
