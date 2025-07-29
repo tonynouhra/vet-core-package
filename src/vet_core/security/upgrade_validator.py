@@ -9,7 +9,7 @@ import json
 import logging
 import os
 import shutil
-import subprocess  # nosec B404: Only used for exception handling, actual calls use secure wrappers
+import subprocess  # nosec B404
 import sys
 import tempfile
 import venv
@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from .models import RemediationAction, Vulnerability, VulnerabilitySeverity
-from .subprocess_utils import (  # nosec B404: Importing secure subprocess utilities
+from .subprocess_utils import (  # nosec B404
     SubprocessSecurityError,
     secure_subprocess_run,
     validate_package_name,
@@ -122,9 +122,7 @@ class EnvironmentBackup:
             # Try to read requirements file to ensure it's not corrupted
             try:
                 content = self.requirements_file.read_text()
-                # Basic validation - should be text content
-                if content is None:
-                    return False
+                # Basic validation - should be text content (read_text() always returns str)
             except (OSError, UnicodeDecodeError):
                 return False
 
@@ -311,7 +309,7 @@ class RestoreResult:
 class BackupValidator:
     """Validates backup integrity and completeness."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the backup validator."""
         self.logger = logging.getLogger(__name__)
 
@@ -327,7 +325,7 @@ class BackupValidator:
         """
         errors = []
         warnings = []
-        metadata = {}
+        metadata: Dict[str, Any] = {}
 
         try:
             # Check if backup path exists and is a directory
@@ -613,9 +611,9 @@ class RestoreLogger:
             name: Logger name (defaults to module name)
         """
         self.logger = logging.getLogger(f"{name}.RestoreLogger")
-        self._operation_id = None
-        self._start_time = None
-        self._operation_context = {}
+        self._operation_id: Optional[str] = None
+        self._start_time: Optional[float] = None
+        self._operation_context: Dict[str, Any] = {}
 
     def start_operation(self, operation_id: str, backup: EnvironmentBackup) -> None:
         """
@@ -787,7 +785,7 @@ class RestoreLogger:
                 f"strategy_used={result.strategy_used}"
             )
 
-    def log_validation_result(self, validation_result) -> None:
+    def log_validation_result(self, validation_result: ValidationResult) -> None:
         """
         Log backup validation results.
 
@@ -834,7 +832,7 @@ class RestoreLogger:
             self.logger.warning(message)
 
     def log_environment_state(
-        self, state_description: str, package_count: int = None
+        self, state_description: str, package_count: Optional[int] = None
     ) -> None:
         """
         Log the current environment state during restoration.
@@ -851,7 +849,7 @@ class RestoreLogger:
 
         self.logger.debug(message)
 
-    def log_error_analysis(self, error_analysis) -> None:
+    def log_error_analysis(self, error_analysis: Any) -> None:
         """
         Log error analysis results.
 
@@ -931,7 +929,7 @@ class RestoreLogger:
 class EnvironmentRestorer:
     """Handles environment restoration with multiple strategies."""
 
-    def __init__(self, logger: Optional[RestoreLogger] = None):
+    def __init__(self, logger: Optional[RestoreLogger] = None) -> None:
         """
         Initialize the environment restorer.
 
@@ -1081,7 +1079,7 @@ class EnvironmentRestorer:
         return final_result
 
     def _try_restore_strategy(
-        self, strategy, backup: EnvironmentBackup
+        self, strategy: Any, backup: EnvironmentBackup
     ) -> RestoreResult:
         """
         Try a specific restoration strategy with error handling.
@@ -1094,7 +1092,8 @@ class EnvironmentRestorer:
             RestoreResult from the strategy attempt
         """
         try:
-            return strategy.restore(backup)
+            result = strategy.restore(backup)
+            return result  # type: ignore[no-any-return]
         except Exception as e:
             strategy_name = strategy.__class__.__name__.replace("Strategy", "")
             error_message = f"Unexpected error in {strategy_name} strategy: {e}"
@@ -1105,7 +1104,7 @@ class EnvironmentRestorer:
             )
 
     def _get_strategy_selection_reason(
-        self, strategy, backup: EnvironmentBackup, last_result: Optional[RestoreResult]
+        self, strategy: Any, backup: EnvironmentBackup, last_result: Optional[RestoreResult]
     ) -> str:
         """
         Get a human-readable reason for selecting a strategy.
@@ -1213,7 +1212,7 @@ class UpgradeValidator:
         is_empty_environment = False
 
         # Enhanced metadata collection
-        backup_metadata = {
+        backup_metadata: Dict[str, Any] = {
             "python_version": sys.version,
             "python_version_info": {
                 "major": sys.version_info.major,
@@ -1229,7 +1228,7 @@ class UpgradeValidator:
 
         # Create requirements backup with improved error handling
         try:
-            # nosec B603: Using secure subprocess wrapper with validation
+            # nosec B603
             result = secure_subprocess_run(
                 [sys.executable, "-m", "pip", "freeze"],
                 validate_first_arg=False,  # sys.executable is trusted
@@ -1663,7 +1662,7 @@ class UpgradeValidator:
             # For now, we'll use a simpler approach with pip check
 
             # First, try to resolve dependencies without installing
-            # nosec B603: Using secure subprocess wrapper with validation
+            # nosec B603
             result = secure_subprocess_run(
                 [
                     sys.executable,
@@ -1683,7 +1682,7 @@ class UpgradeValidator:
                 )
 
             # Check current dependency tree
-            # nosec B603: Using secure subprocess wrapper with validation
+            # nosec B603
             result = secure_subprocess_run(
                 [sys.executable, "-m", "pip", "check"],
                 validate_first_arg=False,  # sys.executable is trusted
@@ -1748,7 +1747,7 @@ class UpgradeValidator:
                 "--durations=10",  # Show 10 slowest tests
             ]
 
-            # nosec B603: Using secure subprocess wrapper with validation
+            # nosec B603
             result = secure_subprocess_run(
                 cmd,
                 validate_first_arg=False,  # sys.executable is trusted
@@ -1839,7 +1838,7 @@ class UpgradeValidator:
             validated_target_version = validate_version(target_version)
 
             # Get current version
-            # nosec B603: Using secure subprocess wrapper with validation
+            # nosec B603
             result = secure_subprocess_run(
                 [sys.executable, "-m", "pip", "show", validated_package_name],
                 validate_first_arg=False,  # sys.executable is trusted
@@ -1879,7 +1878,7 @@ class UpgradeValidator:
 
             # Perform the upgrade
             try:
-                # nosec B603: Using secure subprocess wrapper with validation
+                # nosec B603
                 result = secure_subprocess_run(
                     [
                         sys.executable,
@@ -1928,7 +1927,7 @@ class UpgradeValidator:
                 test_results = self.run_tests()
 
                 if not test_results["success"]:
-                    # Tests failed, rollback
+                    # Validation failed, rollback
                     rollback_performed = self.restore_environment(backup)
 
                     return UpgradeResult.failure_result(

@@ -7,14 +7,14 @@ JSON output into structured vulnerability data.
 
 import json
 import logging
-import subprocess  # nosec B404: Only used for exception handling, actual calls use secure wrappers
+import subprocess  # nosec B404
 import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from .models import SecurityReport, Vulnerability, VulnerabilitySeverity
-from .subprocess_utils import (  # nosec B404: Importing secure subprocess utilities
+from .subprocess_utils import (  # nosec B404
     SubprocessSecurityError,
     get_executable_path,
     secure_subprocess_run,

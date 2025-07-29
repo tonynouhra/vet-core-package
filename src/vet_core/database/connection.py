@@ -392,4 +392,4 @@ def get_database_url(
 
 
 # Alias for backward compatibility
-# test_connection = check_connection
+# check_connection_alias = check_connection

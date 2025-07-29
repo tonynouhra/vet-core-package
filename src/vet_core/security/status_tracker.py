@@ -97,11 +97,12 @@ class ProgressMetrics:
     stages_completed: List[ProgressStage] = field(default_factory=list)
     blockers: List[str] = field(default_factory=list)
     is_overdue: bool = False
+    sla_deadline: Optional[datetime] = None
     progress_percentage: float = field(
         init=False
     )  # Alias for completion_percentage for backward compatibility
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Set progress_percentage as alias for completion_percentage."""
         self.progress_percentage = self.completion_percentage
 
@@ -782,6 +783,7 @@ class VulnerabilityStatusTracker:
             stages_completed=stages_completed,
             blockers=blockers,
             is_overdue=is_overdue,
+            sla_deadline=sla_deadline,
         )
 
     def _save_tracking_record(self, record: VulnerabilityTrackingRecord) -> None:
@@ -835,7 +837,11 @@ class VulnerabilityStatusTracker:
                                 if record.progress_metrics.estimated_completion_time
                                 else None
                             ),
-                            None,  # sla_deadline not available in new ProgressMetrics
+                            (
+                                record.progress_metrics.sla_deadline.isoformat()
+                                if record.progress_metrics.sla_deadline
+                                else None
+                            ),
                             0.5,  # completion_confidence not available, use default
                             datetime.now().isoformat(),
                         ),

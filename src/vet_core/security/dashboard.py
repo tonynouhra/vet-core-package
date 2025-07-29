@@ -209,7 +209,7 @@ class VulnerabilityDashboard:
                     stage = str(metrics.current_stage)
                 print(f"Current Stage: {stage}")
 
-                print(f"Time in Status: {metrics.time_in_current_status}")
+                print(f"Time in Status: {metrics.time_in_current_stage}")
 
                 try:
                     sla_status = "⚠️ OVERDUE" if metrics.is_overdue else "✅ On Track"
@@ -289,34 +289,69 @@ class VulnerabilityDashboard:
         """
         print("🎯 Performing risk assessment...")
 
+        # Check if we have scan data
+        if not self.current_report:
+            print("❌ No scan data available. Run 'scan' command first.")
+            return
+
         # Assess current risks
-        assessment = self.risk_assessor.assess_current_risks()
+        assessments = self.risk_assessor.assess_report(self.current_report)
 
         print(f"\n📊 Risk Assessment Results")
         print("=" * 60)
-        print(f"Overall Risk Score: {assessment.overall_risk_score}")
-        print(f"Risk Level: {assessment.risk_level}")
-
-        if (
-            hasattr(assessment, "critical_vulnerabilities")
-            and assessment.critical_vulnerabilities
-        ):
-            print(
-                f"\nCritical Vulnerabilities: {len(assessment.critical_vulnerabilities)}"
-            )
-
-        if hasattr(assessment, "recommendations") and assessment.recommendations:
-            print(f"\nRecommendations:")
-            for rec in assessment.recommendations:
-                print(f"  • {rec}")
-
-        if show_details and hasattr(assessment, "detailed_analysis"):
-            print(f"\nDetailed Analysis:")
-            if hasattr(assessment.detailed_analysis, "items"):
-                for category, score in assessment.detailed_analysis.items():
-                    print(f"  {category}: {score}")
+        
+        if assessments:
+            # Calculate overall risk score as average of all assessments
+            overall_risk_score = sum(a.risk_score for a in assessments) / len(assessments)
+            
+            # Determine risk level based on highest priority assessments
+            priority_counts: Dict[str, int] = {}
+            for a in assessments:
+                priority_counts[a.priority_level] = priority_counts.get(a.priority_level, 0) + 1
+            
+            if priority_counts.get("immediate", 0) > 0:
+                risk_level = "CRITICAL"
+            elif priority_counts.get("urgent", 0) > 0:
+                risk_level = "HIGH"
+            elif priority_counts.get("scheduled", 0) > 0:
+                risk_level = "MEDIUM"
             else:
-                print(f"  {assessment.detailed_analysis}")
+                risk_level = "LOW"
+                
+            print(f"Overall Risk Score: {overall_risk_score:.2f}")
+            print(f"Risk Level: {risk_level}")
+            print(f"Total Vulnerabilities Assessed: {len(assessments)}")
+        else:
+            print("Overall Risk Score: 0.00")
+            print("Risk Level: LOW")
+            print("Total Vulnerabilities Assessed: 0")
+
+        # Show priority breakdown
+        if assessments:
+            immediate_count = sum(1 for a in assessments if a.priority_level == "immediate")
+            urgent_count = sum(1 for a in assessments if a.priority_level == "urgent")
+            scheduled_count = sum(1 for a in assessments if a.priority_level == "scheduled")
+            planned_count = sum(1 for a in assessments if a.priority_level == "planned")
+            
+            if immediate_count > 0:
+                print(f"\nImmediate Action Required: {immediate_count}")
+            if urgent_count > 0:
+                print(f"Urgent Vulnerabilities: {urgent_count}")
+            if scheduled_count > 0:
+                print(f"Scheduled Vulnerabilities: {scheduled_count}")
+            if planned_count > 0:
+                print(f"Planned Vulnerabilities: {planned_count}")
+
+        if show_details and assessments:
+            print(f"\nDetailed Analysis:")
+            for i, assessment in enumerate(assessments[:5], 1):  # Show top 5
+                print(f"  {i}. Vulnerability {assessment.vulnerability_id}:")
+                print(f"     Risk Score: {assessment.risk_score:.2f}")
+                print(f"     Priority: {assessment.priority_level}")
+                print(f"     Business Impact: {assessment.business_impact}")
+                print(f"     Confidence: {assessment.confidence_score:.2f}")
+            if len(assessments) > 5:
+                print(f"     ... and {len(assessments) - 5} more vulnerabilities")
 
     def generate_report(
         self,
@@ -357,8 +392,13 @@ class VulnerabilityDashboard:
         self, output_file: Optional[Path], format_type: str
     ) -> None:
         """Generate summary report."""
+        # Check if we have scan data
+        if not self.current_report:
+            print("❌ No scan data available. Run 'scan' command first.")
+            return
+            
         # Call the reporter to generate summary report
-        report_data = self.reporter.generate_summary_report()
+        report_data = self.reporter.generate_json_report(self.current_report, include_risk_assessment=False)
 
         if format_type == "json":
             self._save_json_report(
@@ -373,12 +413,10 @@ class VulnerabilityDashboard:
         """Generate detailed report."""
         if not self.current_report:
             print("❌ No scan data available. Run 'scan' command first.")
-            # Still call the reporter even without scan data for testing
-            report_data = self.reporter.generate_detailed_report()
             return
 
         # Call the reporter to generate detailed report
-        report_data = self.reporter.generate_detailed_report()
+        report_data = self.reporter.generate_json_report(self.current_report, include_risk_assessment=True)
 
         if format_type == "json":
             self._save_json_report(
@@ -393,12 +431,10 @@ class VulnerabilityDashboard:
         """Generate compliance report."""
         if not self.current_report:
             print("❌ No scan data available. Run 'scan' command first.")
-            # Still call the compliance manager even without scan data for testing
-            compliance_report = self.compliance_manager.generate_compliance_report()
             return
 
         # Call the compliance manager to generate compliance report
-        compliance_report = self.compliance_manager.generate_compliance_report()
+        compliance_report = self.compliance_manager.generate_compliance_report(ComplianceFramework.NIST_CSF)
 
         if format_type == "json":
             self._save_json_report(
@@ -423,7 +459,7 @@ class VulnerabilityDashboard:
     ) -> None:
         """Generate trends analysis report."""
         # Get events from audit trail
-        events = self.audit_trail.get_events()
+        events = self.audit_trail.get_audit_events()
 
         # Use metrics analyzer for comprehensive trends
         metrics_report = self.metrics_analyzer.generate_metrics_report(
@@ -446,17 +482,18 @@ class VulnerabilityDashboard:
         vulnerability_lifecycle: Dict[str, List[AuditEvent]] = {}
 
         for event in events:
-            # Handle both datetime objects and string timestamps
-            if isinstance(event.timestamp, str):
-                try:
+            # Handle both datetime objects and string timestamps (for tests)
+            if isinstance(event.timestamp, str):  # type: ignore[unreachable]
+                try:  # type: ignore[unreachable]
                     timestamp = datetime.fromisoformat(
                         event.timestamp.replace("Z", "+00:00")
                     )
                     date_key = timestamp.date().isoformat()
                 except (ValueError, AttributeError):
-                    # Fallback to using the string directly or current date
+                    # Fallback to using current date if parsing fails
                     date_key = datetime.now().date().isoformat()
             else:
+                # event.timestamp is a datetime object
                 date_key = event.timestamp.date().isoformat()
 
             if date_key not in daily_stats:
@@ -811,11 +848,22 @@ class VulnerabilityDashboard:
 
         print(f"\n📊 Progress Summary")
         print("=" * 60)
-        print(f"Total Vulnerabilities: {summary.total_vulnerabilities}")
-        print(f"Resolved: {summary.resolved_count}")
-        print(f"In Progress: {summary.in_progress_count}")
-        print(f"New: {summary.new_count}")
-        print(f"Completion: {summary.completion_percentage:.1f}%")
+        print(f"Total Vulnerabilities: {summary['total_vulnerabilities']}")
+        
+        # Extract status counts from status_distribution
+        status_dist = summary.get('status_distribution', {})
+        resolved_count = status_dist.get('resolved', 0) + status_dist.get('verified', 0) + status_dist.get('closed', 0)
+        in_progress_count = status_dist.get('in_progress', 0) + status_dist.get('testing', 0)
+        new_count = status_dist.get('new', 0) + status_dist.get('detected', 0)
+        
+        print(f"Resolved: {resolved_count}")
+        print(f"In Progress: {in_progress_count}")
+        print(f"New: {new_count}")
+        
+        # Extract completion percentage from progress_metrics
+        progress_metrics = summary.get('progress_metrics', {})
+        completion_percentage = progress_metrics.get('completion_rate', 0.0)
+        print(f"Completion: {completion_percentage:.1f}%")
 
     def show_overdue_vulnerabilities(self) -> None:
         """Show overdue vulnerabilities."""
@@ -837,12 +885,12 @@ class VulnerabilityDashboard:
                 # Handle severity safely
                 severity = getattr(record, "severity", None)
                 severity_str = (
-                    severity.value.upper() if hasattr(severity, "value") else "Unknown"
+                    severity.value.upper() if severity is not None and hasattr(severity, "value") else "Unknown"
                 )
 
                 # Handle status safely
                 status = getattr(record, "current_status", None)
-                status_str = status.value if hasattr(status, "value") else "Unknown"
+                status_str = status.value if status is not None and hasattr(status, "value") else "Unknown"
 
                 # Handle metrics safely
                 metrics = getattr(record, "progress_metrics", None)

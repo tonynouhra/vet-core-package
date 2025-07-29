@@ -183,7 +183,7 @@ class SessionManager:
         }
 
         try:
-            # Test basic session creation and query
+            # Verify basic session creation and query
             start_time = time.time()
             async with self.get_session() as session:
                 await session.execute(text("SELECT 1"))
@@ -194,7 +194,7 @@ class SessionManager:
                 "response_time": round(query_time * 1000, 2),  # ms
             }
 
-            # Test transaction capability
+            # Verify transaction capability
             start_time = time.time()
             async with self.get_transaction() as session:
                 await session.execute(text("SELECT 1"))
@@ -260,7 +260,7 @@ class SessionManager:
         try:
             logger.info("Starting database initialization...")
 
-            # Test connection first
+            # Verify connection first
             health = await self.health_check(force=True)
             if health["status"] != "healthy":
                 logger.error("Database health check failed during initialization")
@@ -274,7 +274,7 @@ class SessionManager:
 
             # Perform any additional initialization
             async with self.get_session() as session:
-                # Test that we can perform basic operations
+                # Verify that we can perform basic operations
                 await session.execute(text("SELECT version()"))
                 logger.info("Database initialization completed successfully")
 

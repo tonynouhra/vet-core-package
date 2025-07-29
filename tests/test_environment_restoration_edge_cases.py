@@ -106,11 +106,14 @@ class TestEmptyEnvironmentEdgeCases(unittest.TestCase):
         strategy = CleanInstallStrategy()
 
         # Mock current packages to simulate uninstalling them
-        with patch.object(
-            strategy,
-            "_get_current_packages",
-            return_value=["test-package", "another-package"],
-        ), patch.object(strategy, "_uninstall_packages", return_value=True):
+        with (
+            patch.object(
+                strategy,
+                "_get_current_packages",
+                return_value=["test-package", "another-package"],
+            ),
+            patch.object(strategy, "_uninstall_packages", return_value=True),
+        ):
 
             result = strategy.restore(backup)
 
@@ -562,9 +565,10 @@ class TestNetworkFailureEdgeCases(unittest.TestCase):
         strategy = CleanInstallStrategy()
 
         # Mock current packages and uninstall success
-        with patch.object(
-            strategy, "_get_current_packages", return_value=[]
-        ), patch.object(strategy, "_uninstall_packages", return_value=True):
+        with (
+            patch.object(strategy, "_get_current_packages", return_value=[]),
+            patch.object(strategy, "_uninstall_packages", return_value=True),
+        ):
 
             result = strategy.restore(backup)
 
@@ -698,9 +702,10 @@ class TestNetworkFailureEdgeCases(unittest.TestCase):
 
         strategy = CleanInstallStrategy()
 
-        with patch.object(
-            strategy, "_get_current_packages", return_value=[]
-        ), patch.object(strategy, "_uninstall_packages", return_value=True):
+        with (
+            patch.object(strategy, "_get_current_packages", return_value=[]),
+            patch.object(strategy, "_uninstall_packages", return_value=True),
+        ):
 
             result = strategy.restore(backup)
 

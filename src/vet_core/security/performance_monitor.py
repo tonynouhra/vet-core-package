@@ -15,9 +15,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
-import psutil
+import psutil  # type: ignore
 
-from .subprocess_utils import (  # nosec B404: Importing secure subprocess utilities
+from .subprocess_utils import (  # nosec B404
     SubprocessSecurityError,
     secure_subprocess_run,
     validate_module_name,
@@ -93,7 +93,7 @@ class PerformanceRegression:
     regression_percent: float = 0.0
     threshold_percent: float = 0.0
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Set backward compatibility fields."""
         if self.regression_percent == 0.0:
             self.regression_percent = self.change_percentage
@@ -187,7 +187,7 @@ class PerformanceMonitor:
                 validated_module = validate_module_name(module)
 
                 # Use secure subprocess to get clean import timing
-                # nosec B603: Using secure subprocess wrapper with validation
+                # nosec B603
                 result = secure_subprocess_run(
                     [sys.executable, "-c", f"import {validated_module}"],
                     validate_first_arg=False,  # sys.executable is trusted
@@ -234,7 +234,7 @@ class PerformanceMonitor:
             original_cwd = os.getcwd()
             os.chdir(self.project_root)
 
-            # nosec B603: Using secure subprocess wrapper with validation
+            # nosec B603
             result = secure_subprocess_run(
                 [sys.executable, "-m", validated_test_command, "--tb=no", "-q"],
                 validate_first_arg=False,  # sys.executable is trusted
@@ -277,7 +277,7 @@ class PerformanceMonitor:
             Peak memory usage in MB
         """
         # Get baseline memory usage
-        baseline_memory = self.process.memory_info().rss / 1024 / 1024
+        baseline_memory = float(self.process.memory_info().rss) / 1024 / 1024
         peak_memory = baseline_memory
 
         # Monitor memory during operation
@@ -285,7 +285,7 @@ class PerformanceMonitor:
             nonlocal peak_memory
             while True:
                 try:
-                    current_memory = self.process.memory_info().rss / 1024 / 1024
+                    current_memory = float(self.process.memory_info().rss) / 1024 / 1024
                     peak_memory = max(peak_memory, current_memory)
                     time.sleep(0.1)  # Check every 100ms
                 except:
@@ -319,7 +319,7 @@ class PerformanceMonitor:
             # Validate package name for security
             validated_package_name = validate_package_name(package_name)
 
-            # nosec B603: Using secure subprocess wrapper with validation
+            # nosec B603
             result = secure_subprocess_run(
                 [sys.executable, "-m", "pip", "show", validated_package_name],
                 validate_first_arg=False,  # sys.executable is trusted
@@ -373,7 +373,7 @@ class PerformanceMonitor:
             # Log the command being executed for security auditing
             logger.info(f"Executing startup command: {' '.join(startup_command)}")
 
-            # nosec B603: Using secure subprocess wrapper with validation
+            # nosec B603
             # Note: This accepts arbitrary commands by design for performance testing
             # but logs the command for security auditing
             result = secure_subprocess_run(
@@ -482,8 +482,8 @@ class PerformanceMonitor:
             logger.warning("I/O counters not available on this platform")
             return 0.0
 
-        read_mb = (final_io.read_bytes - initial_io.read_bytes) / 1024 / 1024
-        write_mb = (final_io.write_bytes - initial_io.write_bytes) / 1024 / 1024
+        read_mb = (float(final_io.read_bytes) - float(initial_io.read_bytes)) / 1024 / 1024
+        write_mb = (float(final_io.write_bytes) - float(initial_io.write_bytes)) / 1024 / 1024
 
         return read_mb + write_mb
 

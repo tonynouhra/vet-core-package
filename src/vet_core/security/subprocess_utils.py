@@ -8,7 +8,7 @@ with proper input validation and security measures.
 import logging
 import re
 import shutil
-import subprocess  # nosec B404: This module provides secure subprocess utilities
+import subprocess  # nosec B404
 import sys
 import time
 from dataclasses import dataclass
@@ -692,7 +692,7 @@ def secure_subprocess_run(
         **kwargs,  # Allow overrides (including check parameter)
     }
 
-    # nosec B603: This is a controlled subprocess call with validation
+    # nosec B603
     return subprocess.run(cmd, **secure_kwargs)  # nosec
 
 

@@ -92,9 +92,10 @@ class TestRestoreLogger(unittest.TestCase):
             warnings=["Some warning"],
         )
 
-        with patch.object(self.logger.logger, "info") as mock_info, patch.object(
-            self.logger.logger, "warning"
-        ) as mock_warning:
+        with (
+            patch.object(self.logger.logger, "info") as mock_info,
+            patch.object(self.logger.logger, "warning") as mock_warning,
+        ):
 
             self.logger.log_strategy_result("ForceReinstall", result)
 
@@ -187,9 +188,10 @@ class TestRestoreLogger(unittest.TestCase):
             is_valid=True, errors=[], warnings=["Minor warning"], metadata={}
         )
 
-        with patch.object(self.logger.logger, "info") as mock_info, patch.object(
-            self.logger.logger, "warning"
-        ) as mock_warning:
+        with (
+            patch.object(self.logger.logger, "info") as mock_info,
+            patch.object(self.logger.logger, "warning") as mock_warning,
+        ):
 
             self.logger.log_validation_result(validation_result)
 
@@ -214,9 +216,10 @@ class TestRestoreLogger(unittest.TestCase):
             metadata={},
         )
 
-        with patch.object(self.logger.logger, "error") as mock_error, patch.object(
-            self.logger.logger, "warning"
-        ) as mock_warning:
+        with (
+            patch.object(self.logger.logger, "error") as mock_error,
+            patch.object(self.logger.logger, "warning") as mock_warning,
+        ):
 
             self.logger.log_validation_result(validation_result)
 
@@ -344,14 +347,18 @@ class TestEnvironmentRestorer(unittest.TestCase):
                 strategy="ForceReinstall", packages_restored=1, duration=2.0
             )
 
-            with patch.object(
-                self.restorer.backup_validator,
-                "validate_backup",
-                return_value=validation_result,
-            ), patch.object(
-                self.restorer.strategies[0], "can_handle", return_value=True
-            ), patch.object(
-                self.restorer.strategies[0], "restore", return_value=strategy_result
+            with (
+                patch.object(
+                    self.restorer.backup_validator,
+                    "validate_backup",
+                    return_value=validation_result,
+                ),
+                patch.object(
+                    self.restorer.strategies[0], "can_handle", return_value=True
+                ),
+                patch.object(
+                    self.restorer.strategies[0], "restore", return_value=strategy_result
+                ),
             ):
 
                 result = self.restorer.restore_environment(backup)
@@ -400,18 +407,24 @@ class TestEnvironmentRestorer(unittest.TestCase):
                 strategy="CleanInstall", packages_restored=1, duration=3.0
             )
 
-            with patch.object(
-                self.restorer.backup_validator,
-                "validate_backup",
-                return_value=validation_result,
-            ), patch.object(
-                self.restorer.strategies[0], "can_handle", return_value=True
-            ), patch.object(
-                self.restorer.strategies[0], "restore", return_value=first_failure
-            ), patch.object(
-                self.restorer.strategies[1], "can_handle", return_value=True
-            ), patch.object(
-                self.restorer.strategies[1], "restore", return_value=second_success
+            with (
+                patch.object(
+                    self.restorer.backup_validator,
+                    "validate_backup",
+                    return_value=validation_result,
+                ),
+                patch.object(
+                    self.restorer.strategies[0], "can_handle", return_value=True
+                ),
+                patch.object(
+                    self.restorer.strategies[0], "restore", return_value=first_failure
+                ),
+                patch.object(
+                    self.restorer.strategies[1], "can_handle", return_value=True
+                ),
+                patch.object(
+                    self.restorer.strategies[1], "restore", return_value=second_success
+                ),
             ):
 
                 result = self.restorer.restore_environment(backup)
@@ -457,24 +470,38 @@ class TestEnvironmentRestorer(unittest.TestCase):
             ):
                 # Mock all strategies to fail
                 for strategy in self.restorer.strategies:
-                    with patch.object(
-                        strategy, "can_handle", return_value=True
-                    ), patch.object(strategy, "restore", return_value=failure_result):
+                    with (
+                        patch.object(strategy, "can_handle", return_value=True),
+                        patch.object(strategy, "restore", return_value=failure_result),
+                    ):
                         pass
 
                 # Need to patch all at once
-                with patch.object(
-                    self.restorer.strategies[0], "can_handle", return_value=True
-                ), patch.object(
-                    self.restorer.strategies[0], "restore", return_value=failure_result
-                ), patch.object(
-                    self.restorer.strategies[1], "can_handle", return_value=True
-                ), patch.object(
-                    self.restorer.strategies[1], "restore", return_value=failure_result
-                ), patch.object(
-                    self.restorer.strategies[2], "can_handle", return_value=True
-                ), patch.object(
-                    self.restorer.strategies[2], "restore", return_value=failure_result
+                with (
+                    patch.object(
+                        self.restorer.strategies[0], "can_handle", return_value=True
+                    ),
+                    patch.object(
+                        self.restorer.strategies[0],
+                        "restore",
+                        return_value=failure_result,
+                    ),
+                    patch.object(
+                        self.restorer.strategies[1], "can_handle", return_value=True
+                    ),
+                    patch.object(
+                        self.restorer.strategies[1],
+                        "restore",
+                        return_value=failure_result,
+                    ),
+                    patch.object(
+                        self.restorer.strategies[2], "can_handle", return_value=True
+                    ),
+                    patch.object(
+                        self.restorer.strategies[2],
+                        "restore",
+                        return_value=failure_result,
+                    ),
                 ):
 
                     result = self.restorer.restore_environment(backup)

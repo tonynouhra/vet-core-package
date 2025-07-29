@@ -353,9 +353,13 @@ class TestCleanInstallStrategy(unittest.TestCase):
                 is_empty_environment=True,
             )
 
-            with patch.object(backup, "is_valid", return_value=True), patch.object(
-                self.strategy, "_get_current_packages", return_value=["package1"]
-            ), patch.object(self.strategy, "_uninstall_packages", return_value=True):
+            with (
+                patch.object(backup, "is_valid", return_value=True),
+                patch.object(
+                    self.strategy, "_get_current_packages", return_value=["package1"]
+                ),
+                patch.object(self.strategy, "_uninstall_packages", return_value=True),
+            ):
 
                 result = self.strategy.restore(backup)
 

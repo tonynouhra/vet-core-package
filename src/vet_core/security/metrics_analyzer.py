@@ -65,7 +65,7 @@ class TrendAnalysis:
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert trend analysis to dictionary representation."""
-        result = {
+        result: Dict[str, Any] = {
             "metric_name": self.metric_name,
             "trend_direction": self.trend_direction,
             "data_points": [point.to_dict() for point in self.data_points],
@@ -775,7 +775,8 @@ class SecurityMetricsAnalyzer:
                 continue
 
             # Calculate trend direction and strength
-            trend_direction, trend_strength = self._calculate_trend_direction(values)
+            trend_direction, change_pct, confidence = self._calculate_trend_direction(values)
+            trend_strength = confidence  # Use confidence as trend strength
 
             # Calculate statistics
             avg_value = statistics.mean(values)
