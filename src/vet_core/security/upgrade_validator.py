@@ -1273,7 +1273,9 @@ class UpgradeValidator:
                         requirements_file.touch()
                     except Exception as touch_e:
                         # If even touch fails, continue without the file
-                        logger.debug(f"Failed to create empty requirements file: {touch_e}")
+                        logger.debug(
+                            f"Failed to create empty requirements file: {touch_e}"
+                        )
                     is_empty_environment = True
                     package_count = 0
                     backup_metadata["pip_freeze_failed"] = True
@@ -1312,7 +1314,9 @@ class UpgradeValidator:
                         requirements_file.touch()
                     except Exception as touch_e:
                         # If even touch fails, continue without the file
-                        logger.debug(f"Failed to create empty requirements file: {touch_e}")
+                        logger.debug(
+                            f"Failed to create empty requirements file: {touch_e}"
+                        )
                     backup_metadata["requirements_write_failed"] = True
                     backup_metadata["requirements_write_error"] = str(e)
                 is_empty_environment = True
@@ -1340,7 +1344,9 @@ class UpgradeValidator:
                     requirements_file.touch()
                 except Exception as touch_e:
                     # If even touch fails, continue without the file
-                    logger.debug(f"Failed to create empty requirements file after timeout: {touch_e}")
+                    logger.debug(
+                        f"Failed to create empty requirements file after timeout: {touch_e}"
+                    )
                 backup_metadata["requirements_write_failed"] = True
                 backup_metadata["requirements_write_error"] = str(e)
             is_empty_environment = True
@@ -1366,7 +1372,9 @@ class UpgradeValidator:
                     requirements_file.touch()
                 except Exception as touch_e:
                     # If even touch fails, continue without the file
-                    logger.debug(f"Failed to create empty requirements file after pip freeze error: {touch_e}")
+                    logger.debug(
+                        f"Failed to create empty requirements file after pip freeze error: {touch_e}"
+                    )
                 backup_metadata["requirements_write_failed"] = True
                 backup_metadata["requirements_write_error"] = str(write_e)
             is_empty_environment = True

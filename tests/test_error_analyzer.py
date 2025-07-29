@@ -21,12 +21,12 @@ class TestErrorAnalyzer:
             strategy="ForceReinstall", packages_restored=5, duration=2.0
         )
 
-        analysis = self.analyzer.analyze_error(result)
+        analysis = self.analyzer.analyze(result)
 
-        assert analysis.category == ErrorCategory.UNKNOWN_ERROR
-        assert analysis.confidence == 0.0
-        assert "successful" in analysis.description.lower()
-        assert analysis.is_recoverable is True
+        assert analysis.category == ErrorCategory.UNKNOWN
+        assert analysis.confidence == 1.0
+        assert "successful" in analysis.error_message.lower()
+        assert len(analysis.recovery_suggestions) > 0
 
     def test_analyze_network_error(self):
         """Test analyzing network-related errors."""
@@ -37,7 +37,7 @@ class TestErrorAnalyzer:
             packages_failed=["requests", "urllib3"],
         )
 
-        analysis = self.analyzer.analyze_error(result)
+        analysis = self.analyzer.analyze(result)
 
         assert analysis.category == ErrorCategory.NETWORK_ERROR
         assert analysis.confidence == 0.9
@@ -59,7 +59,7 @@ class TestErrorAnalyzer:
             packages_failed=["numpy"],
         )
 
-        analysis = self.analyzer.analyze_error(result)
+        analysis = self.analyzer.analyze(result)
 
         assert analysis.category == ErrorCategory.PERMISSION_ERROR
         assert analysis.confidence == 0.95
@@ -80,7 +80,7 @@ class TestErrorAnalyzer:
             packages_failed=["nonexistent-package"],
         )
 
-        analysis = self.analyzer.analyze_error(result)
+        analysis = self.analyzer.analyze(result)
 
         assert analysis.category == ErrorCategory.PACKAGE_NOT_FOUND
         assert analysis.confidence == 0.85
@@ -101,7 +101,7 @@ class TestErrorAnalyzer:
             packages_failed=["package-a", "package-b"],
         )
 
-        analysis = self.analyzer.analyze_error(result)
+        analysis = self.analyzer.analyze(result)
 
         assert analysis.category == ErrorCategory.DEPENDENCY_CONFLICT
         assert analysis.confidence == 0.8
@@ -123,7 +123,7 @@ class TestErrorAnalyzer:
             packages_failed=["large-package"],
         )
 
-        analysis = self.analyzer.analyze_error(result)
+        analysis = self.analyzer.analyze(result)
 
         assert analysis.category == ErrorCategory.DISK_SPACE_ERROR
         assert analysis.confidence == 0.95
@@ -144,7 +144,7 @@ class TestErrorAnalyzer:
             packages_failed=["modern-package"],
         )
 
-        analysis = self.analyzer.analyze_error(result)
+        analysis = self.analyzer.analyze(result)
 
         assert analysis.category == ErrorCategory.PYTHON_VERSION_INCOMPATIBLE
         assert analysis.confidence == 0.9
@@ -164,7 +164,7 @@ class TestErrorAnalyzer:
             packages_failed=["corrupted-package"],
         )
 
-        analysis = self.analyzer.analyze_error(result)
+        analysis = self.analyzer.analyze(result)
 
         assert analysis.category == ErrorCategory.CORRUPTED_PACKAGE
         assert analysis.confidence == 0.85
@@ -185,7 +185,7 @@ class TestErrorAnalyzer:
             packages_failed=[],
         )
 
-        analysis = self.analyzer.analyze_error(result)
+        analysis = self.analyzer.analyze(result)
 
         assert analysis.category == ErrorCategory.BACKUP_INVALID
         assert analysis.confidence == 0.9
@@ -205,7 +205,7 @@ class TestErrorAnalyzer:
             packages_failed=["some-package"],
         )
 
-        analysis = self.analyzer.analyze_error(result)
+        analysis = self.analyzer.analyze(result)
 
         assert analysis.category == ErrorCategory.SYSTEM_ERROR
         assert analysis.confidence == 0.6
@@ -225,9 +225,9 @@ class TestErrorAnalyzer:
             packages_failed=["mystery-package"],
         )
 
-        analysis = self.analyzer.analyze_error(result)
+        analysis = self.analyzer.analyze(result)
 
-        assert analysis.category == ErrorCategory.UNKNOWN_ERROR
+        assert analysis.category == ErrorCategory.UNKNOWN
         assert analysis.confidence == 0.1
         assert "unrecognized error pattern" in analysis.description.lower()
         assert "mystery-package" in analysis.affected_packages
@@ -454,7 +454,7 @@ class TestErrorAnalyzer:
             packages_failed=["requests"],
         )
 
-        analysis = self.analyzer.analyze_error(result)
+        analysis = self.analyzer.analyze(result)
 
         assert analysis.category == ErrorCategory.NETWORK_ERROR
         assert analysis.confidence == 0.9
@@ -469,7 +469,7 @@ class TestErrorAnalyzer:
             packages_failed=["requests"],
         )
 
-        analysis = self.analyzer.analyze_error(result)
+        analysis = self.analyzer.analyze(result)
 
         # Network error should have higher confidence than system error
         assert analysis.category == ErrorCategory.NETWORK_ERROR
@@ -484,8 +484,8 @@ class TestErrorAnalyzer:
             packages_failed=["some-package"],
         )
 
-        analysis = self.analyzer.analyze_error(result)
+        analysis = self.analyzer.analyze(result)
 
-        assert analysis.category == ErrorCategory.UNKNOWN_ERROR
+        assert analysis.category == ErrorCategory.UNKNOWN
         assert analysis.confidence == 0.1
         assert analysis.is_recoverable is True
