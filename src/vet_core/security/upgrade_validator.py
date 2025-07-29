@@ -768,14 +768,16 @@ class RestoreLogger:
             if result.warnings:
                 message += f" - {len(result.warnings)} warnings"
             message += f" in {total_duration:.2f}s"
-            
+
             self.logger.info(message)
         else:
-            message = f"[{op_id}] Environment restoration failed after {total_duration:.2f}s"
+            message = (
+                f"[{op_id}] Environment restoration failed after {total_duration:.2f}s"
+            )
             if result.packages_failed:
                 message += f" - {len(result.packages_failed)} packages failed"
             message += f": {result.error_message}"
-            
+
             self.logger.error(message)
 
         # Log operation context for debugging

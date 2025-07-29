@@ -148,16 +148,16 @@ jobs:
         TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_vet_core_test
       run: |
         python -c "
-import sys
-sys.path.insert(0, 'src')
-from vet_core.security.performance_monitor import PerformanceMonitor
-from pathlib import Path
-
-monitor = PerformanceMonitor(Path.cwd())
-metrics = monitor.collect_comprehensive_metrics()
-monitor.save_baseline(metrics)
-print('Baseline performance metrics collected and saved')
-"
+        import sys
+        sys.path.insert(0, 'src')
+        from vet_core.security.performance_monitor import PerformanceMonitor
+        from pathlib import Path
+        
+        monitor = PerformanceMonitor(Path.cwd())
+        metrics = monitor.collect_comprehensive_metrics()
+        monitor.save_baseline(metrics)
+        print('Baseline performance metrics collected and saved')
+        "
 
     - name: Upload baseline metrics
       uses: actions/upload-artifact@v4
