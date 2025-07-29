@@ -63,13 +63,13 @@ jobs:
         fi
         
         # Convert to JSON array
-        PYTHON_ARRAY=$(echo "$PYTHON_VERSIONS" | jq -R 'split(",") | map(select(length > 0))')
+        PYTHON_ARRAY=$(echo "$PYTHON_VERSIONS" | jq -R -c 'split(",") | map(select(length > 0))')
         echo "python-versions=$PYTHON_ARRAY" >> $GITHUB_OUTPUT
         
         # Create test matrix
         if [ -n "${{ github.event.inputs.package_name }}" ]; then
           # Single package test
-          TEST_MATRIX=$(jq -n --arg pkg "${{ github.event.inputs.package_name }}" --arg ver "${{ github.event.inputs.target_version }}" '[{package: $pkg, version: $ver}]')
+          TEST_MATRIX=$(jq -n -c --arg pkg "${{ github.event.inputs.package_name }}" --arg ver "${{ github.event.inputs.target_version }}" '[{package: $pkg, version: $ver}]')
         else
           # Will be populated by vulnerability scan
           TEST_MATRIX="[]"
@@ -557,8 +557,8 @@ jobs:
 
     - name: Set job status
       run: |
-        if [ "${{ needs.upgrade-validation.result }}" != "success" ] || 
-           [ "${{ needs.security-verification.result }}" = "failure" ] || 
+        if [ "${{ needs.upgrade-validation.result }}" != "success" ] || \
+           [ "${{ needs.security-verification.result }}" = "failure" ] || \
            [ "${{ needs.performance-analysis.result }}" != "success" ]; then
           echo "❌ Upgrade validation pipeline failed"
           exit 1
