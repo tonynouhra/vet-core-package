@@ -32,6 +32,7 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.0.0",
     "asyncpg>=0.28.0",
     "pydantic>=2.5.0",
+    "email-validator>=2.0.0",
     "alembic>=1.12.0",
     "psycopg2-binary>=2.9.0",
     "PyYAML>=6.0.0",
@@ -42,8 +43,8 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.4.0",
-    "pytest-asyncio>=0.21.0",
+    "pytest>=8.0.0",        # Updated to avoid py library dependency
+    "pytest-asyncio>=0.23.0",  # Compatible with pytest 8.x
     "pytest-cov>=4.1.0",
     "black>=23.0.0",
     "isort>=5.12.0",
@@ -56,8 +57,8 @@ dev = [
 ]
 
 test = [
-    "pytest>=7.4.0",
-    "pytest-asyncio>=0.21.0",
+    "pytest>=8.0.0",        # Keep consistent with dev
+    "pytest-asyncio>=0.23.0",  # Keep consistent with dev
     "pytest-cov>=4.1.0",
     "factory-boy>=3.3.0",
     "faker>=19.0.0",
@@ -74,6 +75,7 @@ security = [
     "bandit>=1.7.5",
     "safety>=2.3.0",
     "semgrep>=1.45.0",
+    "pip-audit>=2.6.0",     # Added for ongoing vulnerability scanning
 ]
 
 [project.urls]
