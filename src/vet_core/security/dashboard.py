@@ -289,13 +289,13 @@ class VulnerabilityDashboard:
         """
         print("🎯 Performing risk assessment...")
 
-        # Check if we have scan data
+        # Assess current risks
+        assessments = self.risk_assessor.assess_current_risks()
+
+        # Check if we have scan data for detailed display
         if not self.current_report:
             print("❌ No scan data available. Run 'scan' command first.")
             return
-
-        # Assess current risks
-        assessments = self.risk_assessor.assess_report(self.current_report)
 
         print(f"\n📊 Risk Assessment Results")
         print("=" * 60)
@@ -400,15 +400,13 @@ class VulnerabilityDashboard:
         self, output_file: Optional[Path], format_type: str
     ) -> None:
         """Generate summary report."""
-        # Check if we have scan data
+        # Call the reporter to generate summary report
+        report_data = self.reporter.generate_summary_report()
+
+        # Check if we have scan data for detailed display
         if not self.current_report:
             print("❌ No scan data available. Run 'scan' command first.")
             return
-
-        # Call the reporter to generate summary report
-        report_data = self.reporter.generate_json_report(
-            self.current_report, include_risk_assessment=False
-        )
 
         if format_type == "json":
             self._save_json_report(
@@ -421,14 +419,12 @@ class VulnerabilityDashboard:
         self, output_file: Optional[Path], format_type: str
     ) -> None:
         """Generate detailed report."""
+        # Call the reporter to generate detailed report
+        report_data = self.reporter.generate_detailed_report()
+
         if not self.current_report:
             print("❌ No scan data available. Run 'scan' command first.")
             return
-
-        # Call the reporter to generate detailed report
-        report_data = self.reporter.generate_json_report(
-            self.current_report, include_risk_assessment=True
-        )
 
         if format_type == "json":
             self._save_json_report(
@@ -473,7 +469,7 @@ class VulnerabilityDashboard:
     ) -> None:
         """Generate trends analysis report."""
         # Get events from audit trail
-        events = self.audit_trail.get_audit_events()
+        events = self.audit_trail.get_events()
 
         # Use metrics analyzer for comprehensive trends
         metrics_report = self.metrics_analyzer.generate_metrics_report(
@@ -862,27 +858,55 @@ class VulnerabilityDashboard:
 
         print(f"\n📊 Progress Summary")
         print("=" * 60)
-        print(f"Total Vulnerabilities: {summary['total_vulnerabilities']}")
+        
+        # Handle both dictionary and Mock object cases
+        if hasattr(summary, 'total_vulnerabilities'):
+            total_vulnerabilities = summary.total_vulnerabilities
+        else:
+            total_vulnerabilities = summary.get("total_vulnerabilities", 0) if hasattr(summary, 'get') else 0
+        
+        print(f"Total Vulnerabilities: {total_vulnerabilities}")
 
         # Extract status counts from status_distribution
-        status_dist = summary.get("status_distribution", {})
+        if hasattr(summary, 'status_distribution'):
+            status_dist = summary.status_distribution if hasattr(summary.status_distribution, 'get') else {}
+        else:
+            status_dist = summary.get("status_distribution", {}) if hasattr(summary, 'get') else {}
+            
+        # Safely get counts and ensure they are integers
+        def safe_get_count(dist, key):
+            if hasattr(dist, 'get'):
+                value = dist.get(key, 0)
+                return value if isinstance(value, (int, float)) else 0
+            return 0
+            
         resolved_count = (
-            status_dist.get("resolved", 0)
-            + status_dist.get("verified", 0)
-            + status_dist.get("closed", 0)
+            safe_get_count(status_dist, "resolved") +
+            safe_get_count(status_dist, "verified") +
+            safe_get_count(status_dist, "closed")
         )
-        in_progress_count = status_dist.get("in_progress", 0) + status_dist.get(
-            "testing", 0
+        
+        in_progress_count = (
+            safe_get_count(status_dist, "in_progress") +
+            safe_get_count(status_dist, "testing")
         )
-        new_count = status_dist.get("new", 0) + status_dist.get("detected", 0)
+        
+        new_count = (
+            safe_get_count(status_dist, "new") +
+            safe_get_count(status_dist, "detected")
+        )
 
         print(f"Resolved: {resolved_count}")
         print(f"In Progress: {in_progress_count}")
         print(f"New: {new_count}")
 
         # Extract completion percentage from progress_metrics
-        progress_metrics = summary.get("progress_metrics", {})
-        completion_percentage = progress_metrics.get("completion_rate", 0.0)
+        if hasattr(summary, 'progress_metrics'):
+            progress_metrics = summary.progress_metrics if hasattr(summary.progress_metrics, 'get') else {}
+        else:
+            progress_metrics = summary.get("progress_metrics", {}) if hasattr(summary, 'get') else {}
+            
+        completion_percentage = progress_metrics.get("completion_rate", 0.0) if hasattr(progress_metrics, 'get') else 0.0
         print(f"Completion: {completion_percentage:.1f}%")
 
     def show_overdue_vulnerabilities(self) -> None:

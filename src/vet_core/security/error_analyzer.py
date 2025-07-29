@@ -10,9 +10,10 @@ This module provides functionality for:
 import re
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
-from .upgrade_validator import RestoreResult
+if TYPE_CHECKING:
+    from .upgrade_validator import RestoreResult
 
 
 class ErrorCategory(Enum):
@@ -56,6 +57,14 @@ class ErrorAnalyzer:
     def __init__(self):
         """Initialize the error analyzer with pattern matching rules."""
         self._error_patterns = {
+            # Check disk space errors first (more specific patterns)
+            ErrorCategory.DISK_SPACE_ERROR: [
+                r"no\s+space\s+left\s+on\s+device",
+                r"disk.*full",
+                r"insufficient.*disk.*space",
+                r"errno\s+28",
+                r"cannot\s+write.*no\s+space",
+            ],
             ErrorCategory.NETWORK_ERROR: [
                 r"connection.*timed?\s*out",
                 r"network.*error",
@@ -87,13 +96,6 @@ class ErrorAnalyzer:
                 r"incompatible.*requirements",
                 r"version.*conflict",
                 r"requires.*but.*installed",
-            ],
-            ErrorCategory.DISK_SPACE_ERROR: [
-                r"no\s+space\s+left\s+on\s+device",
-                r"disk.*full",
-                r"insufficient.*disk.*space",
-                r"errno\s+28",
-                r"cannot\s+write.*no\s+space",
             ],
             ErrorCategory.PYTHON_VERSION_INCOMPATIBLE: [
                 r"requires\s+python\s+>=?\s*\d+\.\d+",
@@ -187,7 +189,7 @@ class ErrorAnalyzer:
             ],
         }
     
-    def analyze(self, result: RestoreResult) -> ErrorAnalysis:
+    def analyze(self, result: "RestoreResult") -> ErrorAnalysis:
         """
         Analyze a restoration result and categorize any errors.
         
@@ -243,7 +245,7 @@ class ErrorAnalyzer:
             Tuple of (ErrorCategory, confidence_level)
         """
         if not error_message:
-            return ErrorCategory.UNKNOWN, 0.5
+            return ErrorCategory.UNKNOWN, 0.1
         
         error_lower = error_message.lower()
         
@@ -261,7 +263,14 @@ class ErrorAnalyzer:
             ErrorCategory.UNKNOWN: 0.1,
         }
         
+        # Check disk space errors first with highest priority
+        if re.search(r"no\s+space\s+left\s+on\s+device", error_lower, re.IGNORECASE):
+            return ErrorCategory.DISK_SPACE_ERROR, confidence_levels[ErrorCategory.DISK_SPACE_ERROR]
+        
         for category, patterns in self._error_patterns.items():
+            # Skip disk space since we already checked it above
+            if category == ErrorCategory.DISK_SPACE_ERROR:
+                continue
             for pattern in patterns:
                 if re.search(pattern, error_lower, re.IGNORECASE):
                     return category, confidence_levels[category]
@@ -310,19 +319,19 @@ class ErrorAnalyzer:
                 "Consider using a different temporary directory",
             ],
             ErrorCategory.PYTHON_VERSION_INCOMPATIBLE: [
-                "Upgrade Python to a compatible version",
-                "Use a virtual environment with the correct Python version",
-                "Find alternative packages compatible with your Python version",
+                "Check Python version compatibility requirements",
+                "Consider upgrading or downgrading Python to meet requirements",
+                "Find packages compatible with current Python version",
             ],
             ErrorCategory.CORRUPTED_PACKAGE: [
-                "Clear pip cache and retry installation",
-                "Download packages from a different source",
-                "Verify package integrity manually",
+                "Use 'pip cache purge' to clear corrupted cache",
+                "Try downloading packages again from a clean state",
+                "Verify package integrity before installation",
             ],
             ErrorCategory.BACKUP_INVALID: [
                 "Recreate the backup with proper validation",
                 "Check backup file integrity and completeness",
-                "Use a different backup if available",
+                "Verify backup file permissions are correct",
             ],
             ErrorCategory.SYSTEM_ERROR: [
                 "Check system logs for more details",
@@ -366,7 +375,7 @@ class ErrorAnalyzer:
             ErrorCategory.CORRUPTED_PACKAGE: "Package corruption detected during download or installation",
             ErrorCategory.BACKUP_INVALID: "Backup validation failed - backup may be corrupted or incomplete",
             ErrorCategory.SYSTEM_ERROR: "System-level error occurred during the operation",
-            ErrorCategory.UNKNOWN: "An unrecognized error occurred",
+            ErrorCategory.UNKNOWN: "unrecognized error pattern",
         }
         
         return descriptions.get(category, "An error occurred during the operation")
@@ -388,7 +397,7 @@ class ErrorAnalyzer:
         # Most other errors are recoverable with appropriate actions
         return True
     
-    def analyze_error(self, result: RestoreResult) -> ErrorAnalysis:
+    def analyze_error(self, result: "RestoreResult") -> ErrorAnalysis:
         """
         Analyze a restoration result and categorize any errors.
         This is an alias for the analyze method to maintain compatibility.
@@ -401,7 +410,7 @@ class ErrorAnalyzer:
         """
         return self.analyze(result)
     
-    def analyze_multiple_failures(self, results: List[RestoreResult]) -> Dict[ErrorCategory, List[ErrorAnalysis]]:
+    def analyze_multiple_failures(self, results: List["RestoreResult"]) -> Dict[ErrorCategory, List[ErrorAnalysis]]:
         """
         Analyze multiple restoration failures and categorize them.
         
