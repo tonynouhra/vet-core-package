@@ -21,10 +21,7 @@ import pytest
 # Add src to path to ensure we use the latest source code
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from vet_core.security.upgrade_validator import (
-    EnvironmentBackup,
-    UpgradeValidator,
-)
+from vet_core.security.upgrade_validator import EnvironmentBackup, UpgradeValidator
 
 
 class TestEnvironmentRestorationFixed:

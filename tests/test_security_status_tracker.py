@@ -10,6 +10,8 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
+from vet_core.security.audit_trail import AuditEvent, AuditEventType
+from vet_core.security.models import Vulnerability, VulnerabilitySeverity
 from vet_core.security.status_tracker import (
     ProgressMetrics,
     ProgressStage,
@@ -18,8 +20,6 @@ from vet_core.security.status_tracker import (
     VulnerabilityStatusTracker,
     VulnerabilityTrackingRecord,
 )
-from vet_core.security.models import Vulnerability, VulnerabilitySeverity
-from vet_core.security.audit_trail import AuditEvent, AuditEventType
 
 
 class TestVulnerabilityStatus:

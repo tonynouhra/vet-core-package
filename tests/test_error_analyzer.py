@@ -4,7 +4,7 @@ Tests for ErrorAnalyzer functionality.
 
 import pytest
 
-from vet_core.security.error_analyzer import ErrorAnalyzer, ErrorAnalysis, ErrorCategory
+from vet_core.security.error_analyzer import ErrorAnalysis, ErrorAnalyzer, ErrorCategory
 from vet_core.security.upgrade_validator import RestoreResult
 
 

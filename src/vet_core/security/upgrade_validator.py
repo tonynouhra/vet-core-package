@@ -670,6 +670,7 @@ class RestoreLogger:
         # Log current environment state for debugging
         try:
             import sys
+
             from .subprocess_utils import secure_subprocess_run
 
             result = secure_subprocess_run(
@@ -946,9 +947,9 @@ class EnvironmentRestorer:
 
         # Import strategies here to avoid circular imports
         from .restore_strategies import (
-            ForceReinstallStrategy,
             CleanInstallStrategy,
             FallbackStrategy,
+            ForceReinstallStrategy,
         )
 
         # Initialize strategies in order of preference

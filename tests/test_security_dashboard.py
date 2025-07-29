@@ -9,13 +9,13 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
+from vet_core.security.audit_trail import AuditEvent, AuditEventType
 from vet_core.security.dashboard import VulnerabilityDashboard, create_cli_parser, main
 from vet_core.security.models import (
     SecurityReport,
     Vulnerability,
     VulnerabilitySeverity,
 )
-from vet_core.security.audit_trail import AuditEvent, AuditEventType
 from vet_core.security.status_tracker import VulnerabilityStatus
 
 
