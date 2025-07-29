@@ -39,6 +39,7 @@ dependencies = [
     "requests>=2.32.4",
     "urllib3>=2.5.0",
     "idna>=3.10",
+    "psutil>=5.9.0",
 ]
 
 [project.optional-dependencies]
@@ -54,6 +55,7 @@ dev = [
     "bandit>=1.7.5",
     "types-requests>=2.31.0",
     "types-PyYAML>=6.0.0",
+    "psutil>=5.9.0",
 ]
 
 test = [
