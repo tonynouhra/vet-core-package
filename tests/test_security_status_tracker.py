@@ -254,9 +254,12 @@ class TestVulnerabilityStatusTracker:
     @pytest.fixture
     def tracker(self, mock_audit_trail, temp_db_path):
         """Create a VulnerabilityStatusTracker instance."""
-        return VulnerabilityStatusTracker(
+        tracker_instance = VulnerabilityStatusTracker(
             audit_trail=mock_audit_trail, tracking_db_path=temp_db_path
         )
+        yield tracker_instance
+        # Cleanup to prevent Windows file locking issues
+        tracker_instance.cleanup()
 
     @pytest.fixture
     def sample_vulnerability(self):

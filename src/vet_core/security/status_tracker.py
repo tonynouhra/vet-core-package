@@ -260,6 +260,27 @@ class VulnerabilityStatusTracker:
             f"Initialized VulnerabilityStatusTracker with database: {self.tracking_db_path}"
         )
 
+    def cleanup(self) -> None:
+        """
+        Clean up resources and ensure database connections are properly closed.
+        This is especially important on Windows to prevent file locking issues.
+        """
+        import gc
+        import time
+        import platform
+
+        # Clear the tracking cache
+        self.tracking_cache.clear()
+
+        # Force garbage collection to ensure any lingering database connections are closed
+        gc.collect()
+
+        # On Windows, add a small delay to ensure file handles are released
+        if platform.system() == "Windows":
+            time.sleep(0.1)
+
+        self.logger.debug("VulnerabilityStatusTracker cleanup completed")
+
     def _init_tracking_database(self) -> None:
         """Initialize the tracking database."""
         try:
