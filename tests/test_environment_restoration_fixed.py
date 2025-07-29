@@ -4,7 +4,7 @@ Fixed environment restoration tests that work with the enhanced restoration syst
 This module contains the updated test_environment_restoration test that addresses
 all the requirements from task 10:
 1. Update test to work with enhanced restoration system
-2. Add proper assertions for restoration success validation  
+2. Add proper assertions for restoration success validation
 3. Implement test cleanup to ensure no side effects
 4. Add test variations for different environment states
 5. Verify test passes consistently in CI environment
