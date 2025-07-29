@@ -43,8 +43,8 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.0.0",        # Updated to avoid py library dependency
-    "pytest-asyncio>=0.23.0",  # Compatible with pytest 8.x
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
     "pytest-cov>=4.1.0",
     "black>=23.0.0",
     "isort>=5.12.0",
@@ -75,7 +75,12 @@ security = [
     "bandit>=1.7.5",
     "safety>=2.3.0",
     "semgrep>=1.45.0",
-    "pip-audit>=2.6.0",     # Added for ongoing vulnerability scanning
+    "pip-audit>=2.6.0",
+]
+ci = [
+    "pipdeptree>=2.13.0",
+    "pip-check>=2.8.0",
+    "interrogate>=1.5.0",  # For docstring coverage
 ]
 
 [project.urls]

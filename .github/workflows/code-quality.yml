@@ -110,6 +110,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip setuptools>=78.1.1  # ← FORCE UPGRADE
           pip install -e ".[dev,security]"  # ← INSTALL PROJECT DEPS FIRST
+          pip install pip-audit pipdeptree  # ← ADD MISSING CI TOOLS
 
       - name: Check for known vulnerabilities
         run: |
@@ -151,9 +152,8 @@ jobs:
 
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install -e ".[docs]"
-        pip install pydocstyle doc8
+        python -m pip install --upgrade pip setuptools>=78.1.1
+        pip install -e ".[dev,security,ci]"
 
     - name: Check docstring style
       run: |
