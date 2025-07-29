@@ -482,8 +482,12 @@ class PerformanceMonitor:
             logger.warning("I/O counters not available on this platform")
             return 0.0
 
-        read_mb = (float(final_io.read_bytes) - float(initial_io.read_bytes)) / 1024 / 1024
-        write_mb = (float(final_io.write_bytes) - float(initial_io.write_bytes)) / 1024 / 1024
+        read_mb = (
+            (float(final_io.read_bytes) - float(initial_io.read_bytes)) / 1024 / 1024
+        )
+        write_mb = (
+            (float(final_io.write_bytes) - float(initial_io.write_bytes)) / 1024 / 1024
+        )
 
         return read_mb + write_mb
 

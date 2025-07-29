@@ -299,16 +299,20 @@ class VulnerabilityDashboard:
 
         print(f"\n📊 Risk Assessment Results")
         print("=" * 60)
-        
+
         if assessments:
             # Calculate overall risk score as average of all assessments
-            overall_risk_score = sum(a.risk_score for a in assessments) / len(assessments)
-            
+            overall_risk_score = sum(a.risk_score for a in assessments) / len(
+                assessments
+            )
+
             # Determine risk level based on highest priority assessments
             priority_counts: Dict[str, int] = {}
             for a in assessments:
-                priority_counts[a.priority_level] = priority_counts.get(a.priority_level, 0) + 1
-            
+                priority_counts[a.priority_level] = (
+                    priority_counts.get(a.priority_level, 0) + 1
+                )
+
             if priority_counts.get("immediate", 0) > 0:
                 risk_level = "CRITICAL"
             elif priority_counts.get("urgent", 0) > 0:
@@ -317,7 +321,7 @@ class VulnerabilityDashboard:
                 risk_level = "MEDIUM"
             else:
                 risk_level = "LOW"
-                
+
             print(f"Overall Risk Score: {overall_risk_score:.2f}")
             print(f"Risk Level: {risk_level}")
             print(f"Total Vulnerabilities Assessed: {len(assessments)}")
@@ -328,11 +332,15 @@ class VulnerabilityDashboard:
 
         # Show priority breakdown
         if assessments:
-            immediate_count = sum(1 for a in assessments if a.priority_level == "immediate")
+            immediate_count = sum(
+                1 for a in assessments if a.priority_level == "immediate"
+            )
             urgent_count = sum(1 for a in assessments if a.priority_level == "urgent")
-            scheduled_count = sum(1 for a in assessments if a.priority_level == "scheduled")
+            scheduled_count = sum(
+                1 for a in assessments if a.priority_level == "scheduled"
+            )
             planned_count = sum(1 for a in assessments if a.priority_level == "planned")
-            
+
             if immediate_count > 0:
                 print(f"\nImmediate Action Required: {immediate_count}")
             if urgent_count > 0:
@@ -396,9 +404,11 @@ class VulnerabilityDashboard:
         if not self.current_report:
             print("❌ No scan data available. Run 'scan' command first.")
             return
-            
+
         # Call the reporter to generate summary report
-        report_data = self.reporter.generate_json_report(self.current_report, include_risk_assessment=False)
+        report_data = self.reporter.generate_json_report(
+            self.current_report, include_risk_assessment=False
+        )
 
         if format_type == "json":
             self._save_json_report(
@@ -416,7 +426,9 @@ class VulnerabilityDashboard:
             return
 
         # Call the reporter to generate detailed report
-        report_data = self.reporter.generate_json_report(self.current_report, include_risk_assessment=True)
+        report_data = self.reporter.generate_json_report(
+            self.current_report, include_risk_assessment=True
+        )
 
         if format_type == "json":
             self._save_json_report(
@@ -434,7 +446,9 @@ class VulnerabilityDashboard:
             return
 
         # Call the compliance manager to generate compliance report
-        compliance_report = self.compliance_manager.generate_compliance_report(ComplianceFramework.NIST_CSF)
+        compliance_report = self.compliance_manager.generate_compliance_report(
+            ComplianceFramework.NIST_CSF
+        )
 
         if format_type == "json":
             self._save_json_report(
@@ -849,20 +863,26 @@ class VulnerabilityDashboard:
         print(f"\n📊 Progress Summary")
         print("=" * 60)
         print(f"Total Vulnerabilities: {summary['total_vulnerabilities']}")
-        
+
         # Extract status counts from status_distribution
-        status_dist = summary.get('status_distribution', {})
-        resolved_count = status_dist.get('resolved', 0) + status_dist.get('verified', 0) + status_dist.get('closed', 0)
-        in_progress_count = status_dist.get('in_progress', 0) + status_dist.get('testing', 0)
-        new_count = status_dist.get('new', 0) + status_dist.get('detected', 0)
-        
+        status_dist = summary.get("status_distribution", {})
+        resolved_count = (
+            status_dist.get("resolved", 0)
+            + status_dist.get("verified", 0)
+            + status_dist.get("closed", 0)
+        )
+        in_progress_count = status_dist.get("in_progress", 0) + status_dist.get(
+            "testing", 0
+        )
+        new_count = status_dist.get("new", 0) + status_dist.get("detected", 0)
+
         print(f"Resolved: {resolved_count}")
         print(f"In Progress: {in_progress_count}")
         print(f"New: {new_count}")
-        
+
         # Extract completion percentage from progress_metrics
-        progress_metrics = summary.get('progress_metrics', {})
-        completion_percentage = progress_metrics.get('completion_rate', 0.0)
+        progress_metrics = summary.get("progress_metrics", {})
+        completion_percentage = progress_metrics.get("completion_rate", 0.0)
         print(f"Completion: {completion_percentage:.1f}%")
 
     def show_overdue_vulnerabilities(self) -> None:
@@ -885,12 +905,18 @@ class VulnerabilityDashboard:
                 # Handle severity safely
                 severity = getattr(record, "severity", None)
                 severity_str = (
-                    severity.value.upper() if severity is not None and hasattr(severity, "value") else "Unknown"
+                    severity.value.upper()
+                    if severity is not None and hasattr(severity, "value")
+                    else "Unknown"
                 )
 
                 # Handle status safely
                 status = getattr(record, "current_status", None)
-                status_str = status.value if status is not None and hasattr(status, "value") else "Unknown"
+                status_str = (
+                    status.value
+                    if status is not None and hasattr(status, "value")
+                    else "Unknown"
+                )
 
                 # Handle metrics safely
                 metrics = getattr(record, "progress_metrics", None)

@@ -775,7 +775,9 @@ class SecurityMetricsAnalyzer:
                 continue
 
             # Calculate trend direction and strength
-            trend_direction, change_pct, confidence = self._calculate_trend_direction(values)
+            trend_direction, change_pct, confidence = self._calculate_trend_direction(
+                values
+            )
             trend_strength = confidence  # Use confidence as trend strength
 
             # Calculate statistics

@@ -14,11 +14,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from sqlalchemy.ext.asyncio import AsyncEngine
+
 from alembic import command
 from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
-from sqlalchemy.ext.asyncio import AsyncEngine
 
 from ..exceptions import MigrationException
 

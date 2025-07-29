@@ -1104,7 +1104,10 @@ class EnvironmentRestorer:
             )
 
     def _get_strategy_selection_reason(
-        self, strategy: Any, backup: EnvironmentBackup, last_result: Optional[RestoreResult]
+        self,
+        strategy: Any,
+        backup: EnvironmentBackup,
+        last_result: Optional[RestoreResult],
     ) -> str:
         """
         Get a human-readable reason for selecting a strategy.
