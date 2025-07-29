@@ -671,7 +671,7 @@ class RestoreLogger:
         try:
             import sys
 
-            from .subprocess_utils import secure_subprocess_run
+            from .subprocess_utils import secure_subprocess_run  # nosec B404
 
             result = secure_subprocess_run(
                 [sys.executable, "-m", "pip", "list", "--format=freeze"],
@@ -1271,9 +1271,9 @@ class UpgradeValidator:
                     try:
                         # Try to create an empty file so it exists
                         requirements_file.touch()
-                    except Exception:
+                    except Exception as touch_e:
                         # If even touch fails, continue without the file
-                        pass
+                        logger.debug(f"Failed to create empty requirements file: {touch_e}")
                     is_empty_environment = True
                     package_count = 0
                     backup_metadata["pip_freeze_failed"] = True
@@ -1310,9 +1310,9 @@ class UpgradeValidator:
                     try:
                         # Try to create an empty file so it exists
                         requirements_file.touch()
-                    except Exception:
+                    except Exception as touch_e:
                         # If even touch fails, continue without the file
-                        pass
+                        logger.debug(f"Failed to create empty requirements file: {touch_e}")
                     backup_metadata["requirements_write_failed"] = True
                     backup_metadata["requirements_write_error"] = str(e)
                 is_empty_environment = True
@@ -1338,9 +1338,9 @@ class UpgradeValidator:
                 try:
                     # Try to create an empty file so it exists
                     requirements_file.touch()
-                except Exception:
+                except Exception as touch_e:
                     # If even touch fails, continue without the file
-                    pass
+                    logger.debug(f"Failed to create empty requirements file after timeout: {touch_e}")
                 backup_metadata["requirements_write_failed"] = True
                 backup_metadata["requirements_write_error"] = str(e)
             is_empty_environment = True
@@ -1364,9 +1364,9 @@ class UpgradeValidator:
                 try:
                     # Try to create an empty file so it exists
                     requirements_file.touch()
-                except Exception:
+                except Exception as touch_e:
                     # If even touch fails, continue without the file
-                    pass
+                    logger.debug(f"Failed to create empty requirements file after pip freeze error: {touch_e}")
                 backup_metadata["requirements_write_failed"] = True
                 backup_metadata["requirements_write_error"] = str(write_e)
             is_empty_environment = True
