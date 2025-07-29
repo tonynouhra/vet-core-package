@@ -296,38 +296,38 @@ jobs:
         
         # Compare with original vulnerabilities
         python -c "
-import json
-import sys
-
-# Load original vulnerabilities
-with open('all-upgrade-results/vulnerabilities.json', 'r') as f:
-    original = json.load(f)
-
-# Load post-upgrade vulnerabilities
-try:
-    with open('post-upgrade-vulnerabilities.json', 'r') as f:
-        current = json.load(f)
-except FileNotFoundError:
-    current = {'vulnerabilities': []}
-
-original_vulns = {v['id'] for v in original.get('vulnerabilities', [])}
-current_vulns = {v['id'] for v in current.get('vulnerabilities', [])}
-
-resolved_vulns = original_vulns - current_vulns
-remaining_vulns = original_vulns & current_vulns
-
-print(f'Original vulnerabilities: {len(original_vulns)}')
-print(f'Resolved vulnerabilities: {len(resolved_vulns)}')
-print(f'Remaining vulnerabilities: {len(remaining_vulns)}')
-
-if remaining_vulns:
-    print('❌ Some vulnerabilities remain unresolved:')
-    for vuln_id in remaining_vulns:
-        print(f'  - {vuln_id}')
-    sys.exit(1)
-else:
-    print('✅ All vulnerabilities have been resolved')
-"
+        import json
+        import sys
+        
+        # Load original vulnerabilities
+        with open('all-upgrade-results/vulnerabilities.json', 'r') as f:
+            original = json.load(f)
+        
+        # Load post-upgrade vulnerabilities
+        try:
+            with open('post-upgrade-vulnerabilities.json', 'r') as f:
+                current = json.load(f)
+        except FileNotFoundError:
+            current = {'vulnerabilities': []}
+        
+        original_vulns = {v['id'] for v in original.get('vulnerabilities', [])}
+        current_vulns = {v['id'] for v in current.get('vulnerabilities', [])}
+        
+        resolved_vulns = original_vulns - current_vulns
+        remaining_vulns = original_vulns & current_vulns
+        
+        print(f'Original vulnerabilities: {len(original_vulns)}')
+        print(f'Resolved vulnerabilities: {len(resolved_vulns)}')
+        print(f'Remaining vulnerabilities: {len(remaining_vulns)}')
+        
+        if remaining_vulns:
+            print('❌ Some vulnerabilities remain unresolved:')
+            for vuln_id in remaining_vulns:
+                print(f'  - {vuln_id}')
+            sys.exit(1)
+        else:
+            print('✅ All vulnerabilities have been resolved')
+        "
 
     - name: Upload security verification results
       uses: actions/upload-artifact@v4
@@ -373,40 +373,40 @@ else:
     - name: Analyze performance regressions
       run: |
         python -c "
-import json
-import sys
-from pathlib import Path
-
-# Collect all performance results
-all_regressions = []
-significant_regressions = []
-
-for result_file in Path('all-results').glob('*.json'):
-    try:
-        with open(result_file, 'r') as f:
-            data = json.load(f)
+        import json
+        import sys
+        from pathlib import Path
         
-        perf_results = data.get('performance_results', {})
-        regressions = perf_results.get('regressions', [])
+        # Collect all performance results
+        all_regressions = []
+        significant_regressions = []
         
-        for regression in regressions:
-            all_regressions.append(regression)
-            if regression.get('regression_percent', 0) > regression.get('threshold_percent', 0):
-                significant_regressions.append(regression)
-    except Exception as e:
-        print(f'Error processing {result_file}: {e}')
-
-print(f'Total regressions detected: {len(all_regressions)}')
-print(f'Significant regressions: {len(significant_regressions)}')
-
-if significant_regressions:
-    print('❌ Significant performance regressions detected:')
-    for reg in significant_regressions:
-        print(f'  - {reg[\"metric_name\"]}: {reg[\"regression_percent\"]:.1f}% increase ({reg[\"severity\"]})')
-    sys.exit(1)
-else:
-    print('✅ No significant performance regressions detected')
-"
+        for result_file in Path('all-results').glob('*.json'):
+            try:
+                with open(result_file, 'r') as f:
+                    data = json.load(f)
+                
+                perf_results = data.get('performance_results', {})
+                regressions = perf_results.get('regressions', [])
+                
+                for regression in regressions:
+                    all_regressions.append(regression)
+                    if regression.get('regression_percent', 0) > regression.get('threshold_percent', 0):
+                        significant_regressions.append(regression)
+            except Exception as e:
+                print(f'Error processing {result_file}: {e}')
+        
+        print(f'Total regressions detected: {len(all_regressions)}')
+        print(f'Significant regressions: {len(significant_regressions)}')
+        
+        if significant_regressions:
+            print('❌ Significant performance regressions detected:')
+            for reg in significant_regressions:
+                print(f'  - {reg[\"metric_name\"]}: {reg[\"regression_percent\"]:.1f}% increase ({reg[\"severity\"]})')
+            sys.exit(1)
+        else:
+            print('✅ No significant performance regressions detected')
+        "
 
   generate-report:
     name: Generate Comprehensive Report
@@ -436,57 +436,57 @@ else:
     - name: Generate comprehensive report
       run: |
         python -c "
-import json
-import sys
-from pathlib import Path
-from datetime import datetime
-
-# Collect all results
-report_data = {
-    'timestamp': datetime.now().isoformat(),
-    'trigger': '${{ github.event_name }}',
-    'vulnerabilities': [],
-    'upgrade_results': {},
-    'security_verification': {},
-    'performance_analysis': {},
-    'overall_status': 'unknown'
-}
-
-# Load vulnerability scan results
-vuln_file = Path('all-artifacts/vulnerability-scan-results/vulnerabilities.json')
-if vuln_file.exists():
-    with open(vuln_file, 'r') as f:
-        vuln_data = json.load(f)
-        report_data['vulnerabilities'] = vuln_data.get('vulnerabilities', [])
-
-# Load upgrade test results
-upgrade_results = {}
-for result_dir in Path('all-artifacts').glob('upgrade-test-results-*'):
-    for result_file in result_dir.glob('*.json'):
-        with open(result_file, 'r') as f:
-            data = json.load(f)
-            package_name = data.get('package_name', 'unknown')
-            upgrade_results[package_name] = data
-
-report_data['upgrade_results'] = upgrade_results
-
-# Determine overall status
-all_successful = True
-if upgrade_results:
-    for package, result in upgrade_results.items():
-        if not result.get('overall_success', False):
-            all_successful = False
-            break
-
-report_data['overall_status'] = 'success' if all_successful else 'failure'
-
-# Save report data
-with open('upgrade_validation_report.json', 'w') as f:
-    json.dump(report_data, f, indent=2)
-
-print(f'Report generated: {len(report_data[\"vulnerabilities\"])} vulnerabilities, {len(upgrade_results)} packages tested')
-print(f'Overall status: {report_data[\"overall_status\"]}')
-"
+        import json
+        import sys
+        from pathlib import Path
+        from datetime import datetime
+        
+        # Collect all results
+        report_data = {
+            'timestamp': datetime.now().isoformat(),
+            'trigger': '${{ github.event_name }}',
+            'vulnerabilities': [],
+            'upgrade_results': {},
+            'security_verification': {},
+            'performance_analysis': {},
+            'overall_status': 'unknown'
+        }
+        
+        # Load vulnerability scan results
+        vuln_file = Path('all-artifacts/vulnerability-scan-results/vulnerabilities.json')
+        if vuln_file.exists():
+            with open(vuln_file, 'r') as f:
+                vuln_data = json.load(f)
+                report_data['vulnerabilities'] = vuln_data.get('vulnerabilities', [])
+        
+        # Load upgrade test results
+        upgrade_results = {}
+        for result_dir in Path('all-artifacts').glob('upgrade-test-results-*'):
+            for result_file in result_dir.glob('*.json'):
+                with open(result_file, 'r') as f:
+                    data = json.load(f)
+                    package_name = data.get('package_name', 'unknown')
+                    upgrade_results[package_name] = data
+        
+        report_data['upgrade_results'] = upgrade_results
+        
+        # Determine overall status
+        all_successful = True
+        if upgrade_results:
+            for package, result in upgrade_results.items():
+                if not result.get('overall_success', False):
+                    all_successful = False
+                    break
+        
+        report_data['overall_status'] = 'success' if all_successful else 'failure'
+        
+        # Save report data
+        with open('upgrade_validation_report.json', 'w') as f:
+            json.dump(report_data, f, indent=2)
+        
+        print(f'Report generated: {len(report_data[\"vulnerabilities\"])} vulnerabilities, {len(upgrade_results)} packages tested')
+        print(f'Overall status: {report_data[\"overall_status\"]}')
+        "
 
     - name: Create summary report
       run: |
