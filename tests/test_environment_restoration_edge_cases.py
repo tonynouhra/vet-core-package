@@ -587,20 +587,20 @@ class TestNetworkFailureEdgeCases(unittest.TestCase):
             command = args[0]
             mock_result = Mock()
 
-            # Check if it's an individual package install
-            if len(command) > 5 and command[5] in [
+            # Check if it's an individual package install (only one package after 'install')
+            if len(command) == 5 and command[4] in [
                 "package1==1.0.0",
                 "package3==3.0.0",
             ]:
                 # These packages succeed
                 mock_result.returncode = 0
-                mock_result.stdout = f"Successfully installed {command[5]}"
-            elif len(command) > 5 and command[5] == "package2==2.0.0":
+                mock_result.stdout = f"Successfully installed {command[4]}"
+            elif len(command) == 5 and command[4] == "package2==2.0.0":
                 # This package fails due to network
                 mock_result.returncode = 1
                 mock_result.stderr = "ERROR: Could not find a version that satisfies the requirement package2==2.0.0"
             else:
-                # Batch installs fail
+                # Batch installs fail (multiple packages or force reinstall)
                 mock_result.returncode = 1
                 mock_result.stderr = "Network error during batch installation"
 
@@ -872,24 +872,24 @@ class TestLargeEnvironmentEdgeCases(unittest.TestCase):
             command = args[0]
             mock_result = Mock()
 
-            if len(command) > 5 and command[5].startswith("test-package-"):
+            if len(command) == 5 and command[4].startswith("test-package-"):
                 # Individual package installs - some succeed, some fail
                 try:
-                    package_spec = command[5]
+                    package_spec = command[4]
                     package_num_str = package_spec.split("-")[2].split("==")[0]
                     package_num = int(package_num_str)
                     if package_num % 5 == 0:  # Every 5th package fails
                         mock_result.returncode = 1
-                        mock_result.stderr = f"ERROR: Could not install {command[5]}"
+                        mock_result.stderr = f"ERROR: Could not install {command[4]}"
                     else:
                         mock_result.returncode = 0
-                        mock_result.stdout = f"Successfully installed {command[5]}"
+                        mock_result.stdout = f"Successfully installed {command[4]}"
                 except (ValueError, IndexError):
                     # If parsing fails, assume success
                     mock_result.returncode = 0
-                    mock_result.stdout = f"Successfully installed {command[5]}"
+                    mock_result.stdout = f"Successfully installed {command[4]}"
             else:
-                # Batch operations fail
+                # Batch operations fail (multiple packages or force reinstall)
                 mock_result.returncode = 1
                 mock_result.stderr = "Batch operation failed"
 

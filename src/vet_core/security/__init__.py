@@ -43,7 +43,7 @@ from .models import (
 )
 from .reporter import SecurityReporter
 from .scanner import VulnerabilityScanner
-# from .error_analyzer import ErrorAnalysis, ErrorAnalyzer, ErrorCategory
+from .error_analyzer import ErrorAnalysis, ErrorAnalyzer, ErrorCategory
 from .restore_strategies import (
     CleanInstallStrategy,
     FallbackStrategy,
@@ -96,9 +96,9 @@ __all__ = [
     "ConfigurationError",
     "get_config",
     "validate_config",
-    # "ErrorAnalysis",
-    # "ErrorAnalyzer", 
-    # "ErrorCategory",
+    "ErrorAnalysis",
+    "ErrorAnalyzer", 
+    "ErrorCategory",
     "RestoreStrategy",
     "ForceReinstallStrategy",
     "CleanInstallStrategy",
