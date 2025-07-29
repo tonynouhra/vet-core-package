@@ -392,16 +392,18 @@ class FallbackStrategy(RestoreStrategy):
                 )
             
             # Final fallback: try individual packages
-            successful_packages = self._try_individual_packages(packages)
+            successful_packages, failed_packages = self._try_individual_packages(packages)
             
             if successful_packages:
                 # Always indicate partial success when falling back to individual packages
                 # since batch installation failed
                 warnings = ["Partial success"]
                 
-                return RestoreResult.success_result(
-                    strategy="Fallback",
+                return RestoreResult(
+                    success=True,
+                    strategy_used="Fallback",
                     packages_restored=len(successful_packages),
+                    packages_failed=failed_packages,
                     duration=time.time() - start_time,
                     warnings=warnings
                 )
@@ -431,9 +433,10 @@ class FallbackStrategy(RestoreStrategy):
         cmd = [sys.executable, "-m", "pip", "install", "--force-reinstall"] + packages
         return secure_subprocess_run(cmd, capture_output=True, text=True)
     
-    def _try_individual_packages(self, packages: List[str]) -> List[str]:
+    def _try_individual_packages(self, packages: List[str]) -> tuple[List[str], List[str]]:
         """Try installing packages individually."""
         successful = []
+        failed = []
         
         for package in packages:
             try:
@@ -441,7 +444,9 @@ class FallbackStrategy(RestoreStrategy):
                 result = secure_subprocess_run(cmd, capture_output=True, text=True)
                 if result.returncode == 0:
                     successful.append(package)
+                else:
+                    failed.append(package)
             except Exception:
-                continue
+                failed.append(package)
         
-        return successful
+        return successful, failed
