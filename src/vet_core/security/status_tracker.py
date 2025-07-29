@@ -39,11 +39,14 @@ class VulnerabilityStatus(Enum):
     CLOSED = "closed"
     IGNORED = "ignored"
     DEFERRED = "deferred"
+    FALSE_POSITIVE = "false_positive"
 
 
 class ProgressStage(Enum):
     """Progress stages for vulnerability remediation."""
 
+    DETECTION = "detection"
+    ANALYSIS = "analysis"
     DISCOVERY = "discovery"
     ASSESSMENT = "assessment"
     PLANNING = "planning"
@@ -87,38 +90,31 @@ class StatusChange:
 class ProgressMetrics:
     """Metrics for vulnerability progress tracking."""
 
-    vulnerability_id: str
-    current_status: VulnerabilityStatus
     current_stage: ProgressStage
-    progress_percentage: float  # 0.0 to 100.0
-    time_in_current_status: timedelta
-    total_time_since_detection: timedelta
-    estimated_completion_time: Optional[datetime] = None
-    sla_deadline: Optional[datetime] = None
+    completion_percentage: float  # 0.0 to 100.0
+    time_in_current_stage: timedelta
+    estimated_completion_time: timedelta
+    stages_completed: List[ProgressStage] = field(default_factory=list)
+    blockers: List[str] = field(default_factory=list)
     is_overdue: bool = False
-    completion_confidence: float = 0.5  # 0.0 to 1.0
+    progress_percentage: float = field(
+        init=False
+    )  # Alias for completion_percentage for backward compatibility
+
+    def __post_init__(self):
+        """Set progress_percentage as alias for completion_percentage."""
+        self.progress_percentage = self.completion_percentage
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert progress metrics to dictionary representation."""
         return {
-            "vulnerability_id": self.vulnerability_id,
-            "current_status": self.current_status.value,
             "current_stage": self.current_stage.value,
-            "progress_percentage": self.progress_percentage,
-            "time_in_current_status_hours": self.time_in_current_status.total_seconds()
+            "completion_percentage": self.completion_percentage,
+            "time_in_current_stage": self.time_in_current_stage.total_seconds() / 3600,
+            "estimated_completion_time": self.estimated_completion_time.total_seconds()
             / 3600,
-            "total_time_since_detection_hours": self.total_time_since_detection.total_seconds()
-            / 3600,
-            "estimated_completion_time": (
-                self.estimated_completion_time.isoformat()
-                if self.estimated_completion_time
-                else None
-            ),
-            "sla_deadline": (
-                self.sla_deadline.isoformat() if self.sla_deadline else None
-            ),
-            "is_overdue": self.is_overdue,
-            "completion_confidence": self.completion_confidence,
+            "stages_completed": [stage.value for stage in self.stages_completed],
+            "blockers": self.blockers,
         }
 
 
@@ -145,7 +141,7 @@ class VulnerabilityTrackingRecord:
         return {
             "vulnerability_id": self.vulnerability_id,
             "package_name": self.package_name,
-            "severity": self.severity.value,
+            "severity": self.severity.name,
             "current_status": self.current_status.value,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
@@ -171,11 +167,18 @@ class VulnerabilityStatusTracker:
 
     # Status progression mapping
     STATUS_PROGRESSION = {
-        VulnerabilityStatus.NEW: [VulnerabilityStatus.DETECTED],
+        VulnerabilityStatus.NEW: [
+            VulnerabilityStatus.DETECTED,
+            VulnerabilityStatus.IN_PROGRESS,
+            VulnerabilityStatus.ASSESSED,
+            VulnerabilityStatus.ASSIGNED,
+            VulnerabilityStatus.RESOLVED,
+        ],
         VulnerabilityStatus.DETECTED: [
             VulnerabilityStatus.ASSESSED,
             VulnerabilityStatus.IGNORED,
             VulnerabilityStatus.ASSIGNED,
+            VulnerabilityStatus.IN_PROGRESS,
         ],
         VulnerabilityStatus.ASSESSED: [
             VulnerabilityStatus.ASSIGNED,
@@ -267,7 +270,7 @@ class VulnerabilityStatusTracker:
                 # Create tracking records table
                 cursor.execute(
                     """
-                    CREATE TABLE IF NOT EXISTS vulnerability_tracking (
+                    CREATE TABLE IF NOT EXISTS tracking_records (
                         vulnerability_id TEXT PRIMARY KEY,
                         package_name TEXT NOT NULL,
                         severity TEXT NOT NULL,
@@ -297,7 +300,7 @@ class VulnerabilityStatusTracker:
                         reason TEXT,
                         notes TEXT,
                         metadata TEXT,  -- JSON object
-                        FOREIGN KEY (vulnerability_id) REFERENCES vulnerability_tracking (vulnerability_id)
+                        FOREIGN KEY (vulnerability_id) REFERENCES tracking_records (vulnerability_id)
                     )
                 """
                 )
@@ -313,20 +316,20 @@ class VulnerabilityStatusTracker:
                         sla_deadline TEXT,
                         completion_confidence REAL DEFAULT 0.5,
                         calculated_at TEXT NOT NULL,
-                        FOREIGN KEY (vulnerability_id) REFERENCES vulnerability_tracking (vulnerability_id)
+                        FOREIGN KEY (vulnerability_id) REFERENCES tracking_records (vulnerability_id)
                     )
                 """
                 )
 
                 # Create indexes
                 cursor.execute(
-                    "CREATE INDEX IF NOT EXISTS idx_tracking_status ON vulnerability_tracking(current_status)"
+                    "CREATE INDEX IF NOT EXISTS idx_tracking_status ON tracking_records(current_status)"
                 )
                 cursor.execute(
-                    "CREATE INDEX IF NOT EXISTS idx_tracking_severity ON vulnerability_tracking(severity)"
+                    "CREATE INDEX IF NOT EXISTS idx_tracking_severity ON tracking_records(severity)"
                 )
                 cursor.execute(
-                    "CREATE INDEX IF NOT EXISTS idx_tracking_updated ON vulnerability_tracking(updated_at)"
+                    "CREATE INDEX IF NOT EXISTS idx_tracking_updated ON tracking_records(updated_at)"
                 )
                 cursor.execute(
                     "CREATE INDEX IF NOT EXISTS idx_status_changes_vuln ON status_changes(vulnerability_id)"
@@ -405,7 +408,22 @@ class VulnerabilityStatusTracker:
         self.tracking_cache[vulnerability.id] = record
 
         # Log to audit trail
-        self.audit_trail.log_vulnerability_detected(vulnerability)
+        audit_event = AuditEvent(
+            event_type=AuditEventType.VULNERABILITY_DETECTED,
+            vulnerability_id=vulnerability.id,
+            package_name=vulnerability.package_name,
+            severity=vulnerability.severity,
+            action_taken="vulnerability_tracking_started",
+            outcome="tracking_initiated",
+            details={
+                "description": f"Started tracking vulnerability in {vulnerability.package_name}",
+                "initial_status": initial_status.value,
+                "assigned_to": assigned_to,
+                "priority_score": priority_score,
+                "tags": tags or [],
+            },
+        )
+        self.audit_trail.log_event(audit_event)
 
         self.logger.info(f"Started tracking vulnerability: {vulnerability.id}")
         return record
@@ -418,7 +436,7 @@ class VulnerabilityStatusTracker:
         reason: str = "",
         notes: str = "",
         metadata: Optional[Dict[str, Any]] = None,
-    ) -> bool:
+    ) -> Optional[VulnerabilityTrackingRecord]:
         """
         Update vulnerability status.
 
@@ -431,14 +449,14 @@ class VulnerabilityStatusTracker:
             metadata: Additional metadata
 
         Returns:
-            True if status was updated successfully
+            Updated VulnerabilityTrackingRecord if successful, None otherwise
         """
         record = self.get_tracking_record(vulnerability_id)
         if not record:
             self.logger.error(
                 f"Vulnerability {vulnerability_id} not found for status update"
             )
-            return False
+            return None
 
         # Validate status transition
         if not self._is_valid_status_transition(record.current_status, new_status):
@@ -446,7 +464,7 @@ class VulnerabilityStatusTracker:
                 f"Invalid status transition for {vulnerability_id}: "
                 f"{record.current_status.value} -> {new_status.value}"
             )
-            return False
+            return None
 
         # Create status change record
         status_change = StatusChange(
@@ -487,7 +505,7 @@ class VulnerabilityStatusTracker:
             f"{status_change.old_status.value if status_change.old_status else 'None'} -> {new_status.value}"
         )
 
-        return True
+        return record
 
     def get_tracking_record(
         self, vulnerability_id: str
@@ -533,7 +551,7 @@ class VulnerabilityStatusTracker:
             with sqlite3.connect(self.tracking_db_path) as conn:
                 cursor = conn.cursor()
 
-                query = "SELECT vulnerability_id FROM vulnerability_tracking WHERE 1=1"
+                query = "SELECT vulnerability_id FROM tracking_records WHERE 1=1"
                 params = []
 
                 if status_filter:
@@ -724,17 +742,46 @@ class VulnerabilityStatusTracker:
         elif is_overdue:
             completion_confidence = 0.3
 
+        # Determine completed stages based on current status
+        stages_completed = []
+        stage_order = [
+            ProgressStage.DETECTION,
+            ProgressStage.ANALYSIS,
+            ProgressStage.DISCOVERY,
+            ProgressStage.ASSESSMENT,
+            ProgressStage.PLANNING,
+            ProgressStage.IMPLEMENTATION,
+            ProgressStage.TESTING,
+            ProgressStage.DEPLOYMENT,
+            ProgressStage.VERIFICATION,
+            ProgressStage.CLOSURE,
+        ]
+
+        current_stage_index = (
+            stage_order.index(current_stage) if current_stage in stage_order else 0
+        )
+        stages_completed = stage_order[:current_stage_index]
+
+        # Determine blockers (simplified)
+        blockers = []
+        if is_overdue:
+            blockers.append("SLA deadline exceeded")
+        if record.current_status == VulnerabilityStatus.DEFERRED:
+            blockers.append("Deferred for later resolution")
+
+        # Convert estimated_completion_time to timedelta if it exists
+        estimated_completion_timedelta = timedelta()
+        if estimated_completion_time:
+            estimated_completion_timedelta = estimated_completion_time - now
+
         return ProgressMetrics(
-            vulnerability_id=record.vulnerability_id,
-            current_status=record.current_status,
             current_stage=current_stage,
-            progress_percentage=progress_percentage,
-            time_in_current_status=time_in_current_status,
-            total_time_since_detection=total_time_since_detection,
-            estimated_completion_time=estimated_completion_time,
-            sla_deadline=sla_deadline,
+            completion_percentage=progress_percentage,
+            time_in_current_stage=time_in_current_status,
+            estimated_completion_time=estimated_completion_timedelta,
+            stages_completed=stages_completed,
+            blockers=blockers,
             is_overdue=is_overdue,
-            completion_confidence=completion_confidence,
         )
 
     def _save_tracking_record(self, record: VulnerabilityTrackingRecord) -> None:
@@ -745,7 +792,7 @@ class VulnerabilityStatusTracker:
 
                 cursor.execute(
                     """
-                    INSERT OR REPLACE INTO vulnerability_tracking (
+                    INSERT OR REPLACE INTO tracking_records (
                         vulnerability_id, package_name, severity, current_status,
                         created_at, updated_at, assigned_to, priority_score,
                         estimated_effort_hours, actual_effort_hours, tags, metadata
@@ -780,18 +827,16 @@ class VulnerabilityStatusTracker:
                         (
                             record.vulnerability_id,
                             record.progress_metrics.current_stage.value,
-                            record.progress_metrics.progress_percentage,
+                            record.progress_metrics.completion_percentage,
                             (
-                                record.progress_metrics.estimated_completion_time.isoformat()
+                                str(
+                                    record.progress_metrics.estimated_completion_time.total_seconds()
+                                )
                                 if record.progress_metrics.estimated_completion_time
                                 else None
                             ),
-                            (
-                                record.progress_metrics.sla_deadline.isoformat()
-                                if record.progress_metrics.sla_deadline
-                                else None
-                            ),
-                            record.progress_metrics.completion_confidence,
+                            None,  # sla_deadline not available in new ProgressMetrics
+                            0.5,  # completion_confidence not available, use default
                             datetime.now().isoformat(),
                         ),
                     )
@@ -850,7 +895,7 @@ class VulnerabilityStatusTracker:
                     SELECT vulnerability_id, package_name, severity, current_status,
                            created_at, updated_at, assigned_to, priority_score,
                            estimated_effort_hours, actual_effort_hours, tags
-                    FROM vulnerability_tracking
+                    FROM tracking_records
                     WHERE vulnerability_id = ?
                 """,
                     (vulnerability_id,),

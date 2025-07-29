@@ -67,7 +67,7 @@ def event_loop():
     loop.close()
 
 
-@pytest.fixture(scope="session")
+@pytest_asyncio.fixture(scope="session")
 async def test_engine() -> AsyncGenerator[AsyncEngine, None]:
     """
     Create a test database engine with proper configuration.
@@ -108,7 +108,7 @@ async def test_engine() -> AsyncGenerator[AsyncEngine, None]:
     await engine.dispose()
 
 
-@pytest.fixture(scope="session")
+@pytest_asyncio.fixture(scope="session")
 async def test_session_manager(
     test_engine: AsyncEngine,
 ) -> AsyncGenerator[SessionManager, None]:

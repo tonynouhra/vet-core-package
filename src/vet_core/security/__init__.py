@@ -44,11 +44,13 @@ from .models import (
 from .reporter import SecurityReporter
 from .scanner import VulnerabilityScanner
 from .upgrade_validator import (
+    BackupValidator,
     DependencyConflictError,
     EnvironmentBackup,
     TestFailureError,
     UpgradeResult,
     UpgradeValidator,
+    ValidationResult,
     validate_vulnerability_fixes,
 )
 
@@ -64,6 +66,8 @@ __all__ = [
     "UpgradeValidator",
     "UpgradeResult",
     "EnvironmentBackup",
+    "BackupValidator",
+    "ValidationResult",
     "DependencyConflictError",
     "TestFailureError",
     "validate_vulnerability_fixes",

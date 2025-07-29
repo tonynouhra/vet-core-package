@@ -45,6 +45,7 @@ class AuditEventType(Enum):
     COMPLIANCE_CHECK = "compliance_check"
     POLICY_VIOLATION = "policy_violation"
     MANUAL_OVERRIDE = "manual_override"
+    FALSE_POSITIVE_REPORTED = "false_positive_reported"
 
 
 @dataclass
