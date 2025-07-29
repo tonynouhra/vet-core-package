@@ -39,6 +39,7 @@ class VulnerabilityStatus(Enum):
     CLOSED = "closed"
     IGNORED = "ignored"
     DEFERRED = "deferred"
+    FALSE_POSITIVE = "false_positive"
 
 
 class ProgressStage(Enum):

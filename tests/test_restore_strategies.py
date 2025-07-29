@@ -531,18 +531,24 @@ class TestFallbackStrategy(unittest.TestCase):
     def test_restore_individual_package_fallback(self, mock_subprocess):
         """Test fallback to individual package installation."""
 
+        # Track call count to distinguish between calls
+        call_count = 0
+        
         # Setup mock subprocess results
         def subprocess_side_effect(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
             command = args[0]
             mock_result = Mock()
 
-            if len(command) > 5 and command[5] == "package1==1.0.0":
-                # Individual package install succeeds
-                mock_result.returncode = 0
-            else:
-                # Batch installs fail
+            # First call: standard install - should fail
+            # Second call: force reinstall - should fail  
+            # Third call: individual package install - should succeed
+            if call_count <= 2:
                 mock_result.returncode = 1
                 mock_result.stderr = "Batch install failed"
+            else:
+                mock_result.returncode = 0
 
             return mock_result
 

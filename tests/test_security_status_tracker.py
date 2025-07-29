@@ -38,10 +38,11 @@ class TestVulnerabilityStatus:
         assert VulnerabilityStatus.CLOSED.value == "closed"
         assert VulnerabilityStatus.IGNORED.value == "ignored"
         assert VulnerabilityStatus.DEFERRED.value == "deferred"
+        assert VulnerabilityStatus.FALSE_POSITIVE.value == "false_positive"
 
     def test_vulnerability_status_count(self):
         """Test that all expected status values are present."""
-        expected_count = 11
+        expected_count = 12
         assert len(VulnerabilityStatus) == expected_count
 
 

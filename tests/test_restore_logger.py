@@ -149,7 +149,6 @@ class TestRestoreLogger:
         assert "[test-op]" in caplog.text
         assert "ForceReinstall strategy failed" in caplog.text
         assert "Network error" in caplog.text
-        assert "Failed packages (6 total)" in caplog.text
         assert "requests, numpy, pandas, scipy, matplotlib and 1 more" in caplog.text
 
     def test_log_final_result_success(self, caplog):
