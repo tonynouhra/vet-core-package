@@ -557,9 +557,42 @@ jobs:
 
     - name: Set job status
       run: |
-        if [ "${{ needs.upgrade-validation.result }}" != "success" ] || \
-           [ "${{ needs.security-verification.result }}" = "failure" ] || \
-           [ "${{ needs.performance-analysis.result }}" != "success" ]; then
+        # Check if critical jobs failed
+        # upgrade-validation: must be success (unless skipped due to no vulnerabilities/packages)
+        # security-verification: can be success or skipped (skipped is acceptable when no vulnerabilities)
+        # performance-analysis: must be success (unless upgrade-validation was skipped)
+        
+        UPGRADE_RESULT="${{ needs.upgrade-validation.result }}"
+        SECURITY_RESULT="${{ needs.security-verification.result }}"
+        PERFORMANCE_RESULT="${{ needs.performance-analysis.result }}"
+        
+        echo "Job results:"
+        echo "  Upgrade validation: $UPGRADE_RESULT"
+        echo "  Security verification: $SECURITY_RESULT"
+        echo "  Performance analysis: $PERFORMANCE_RESULT"
+        
+        # Determine if pipeline should fail
+        PIPELINE_FAILED=false
+        
+        # Upgrade validation should be success or skipped (skipped when no vulnerabilities and no manual package specified)
+        if [ "$UPGRADE_RESULT" = "failure" ]; then
+          echo "❌ Upgrade validation failed"
+          PIPELINE_FAILED=true
+        fi
+        
+        # Security verification should be success or skipped (failure is not acceptable)
+        if [ "$SECURITY_RESULT" = "failure" ]; then
+          echo "❌ Security verification failed"
+          PIPELINE_FAILED=true
+        fi
+        
+        # Performance analysis should be success or skipped (skipped when upgrade-validation was skipped)
+        if [ "$PERFORMANCE_RESULT" = "failure" ]; then
+          echo "❌ Performance analysis failed"
+          PIPELINE_FAILED=true
+        fi
+        
+        if [ "$PIPELINE_FAILED" = "true" ]; then
           echo "❌ Upgrade validation pipeline failed"
           exit 1
         else
